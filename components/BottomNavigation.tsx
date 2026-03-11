@@ -1,13 +1,14 @@
 import React from 'react';
-import { ScreenName } from '../types';
-import { Home, Map, BarChart2, User, Gamepad2, History } from 'lucide-react';
+import { ScreenName, UserProfile } from '../types';
+import { Home, Map, BarChart2, User, Gamepad2, History, TrendingUp } from 'lucide-react';
 
 interface Props {
   currentScreen: ScreenName;
   onNavigate: (screen: ScreenName) => void;
+  user: UserProfile;
 }
 
-export const BottomNavigation: React.FC<Props> = ({ currentScreen, onNavigate }) => {
+export const BottomNavigation: React.FC<Props> = ({ currentScreen, onNavigate, user }) => {
   const tabs = [
     { id: ScreenName.LEARNING_PATH, icon: Home, label: 'Trang chủ' },
     { id: ScreenName.HISTORY, icon: History, label: 'Lịch sử' },
@@ -15,6 +16,10 @@ export const BottomNavigation: React.FC<Props> = ({ currentScreen, onNavigate })
     { id: ScreenName.PARENT_REPORT, icon: BarChart2, label: 'Báo cáo' },
     { id: ScreenName.PROFILE, icon: User, label: 'Cá nhân' },
   ];
+
+  if (user.isAdmin) {
+    tabs.splice(2, 0, { id: ScreenName.ADMIN_STATISTICS, icon: TrendingUp, label: 'Thống kê' });
+  }
 
   return (
     <div className="md:hidden absolute bottom-0 w-full bg-white border-t border-gray-100 pb-safe pt-2 px-6 z-50">

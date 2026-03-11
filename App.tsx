@@ -15,6 +15,7 @@ import { GameLibraryScreen } from './components/screens/GameLibraryScreen';
 import { ClassSelectionScreen } from './components/screens/ClassSelectionScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { HistoryScreen } from './components/screens/HistoryScreen';
+import { AdminStatisticsScreen } from './components/screens/AdminStatisticsScreen';
 import { BottomNavigation } from './components/BottomNavigation';
 import { SidebarNavigation } from './components/SidebarNavigation';
 import { ApiKeyModal } from './components/ApiKeyModal';
@@ -81,7 +82,8 @@ export default function App() {
       grade: 11,
       numerologyNumber: 0,
       proficiencyLevel: 3,
-      history: []
+      history: [],
+      loginDates: []
     };
   });
 
@@ -129,7 +131,7 @@ export default function App() {
     );
 
     // 2. Load DB
-    let db = {};
+    let db: Record<string, UserProfile> = {};
     try {
       const rawDb = localStorage.getItem(STUDENT_DB_KEY);
       db = rawDb ? JSON.parse(rawDb) : {};
@@ -144,6 +146,8 @@ export default function App() {
         // User exists in DB, merge with config
         userData = db[dbId];
         userData!.isVip = student.isVip;
+        userData!.isAdmin = student.isAdmin;
+        userData!.loginDates = [...(userData!.loginDates || []), Date.now()];
 
         // Refresh expiry if config changes (optional, but good for admin control)
         const limitDays = student.limitDays || 90;
@@ -165,7 +169,9 @@ export default function App() {
           proficiencyLevel: 3,
           history: [],
           isVip: student.isVip,
-          expiryDate: expiry
+          isAdmin: student.isAdmin,
+          expiryDate: expiry,
+          loginDates: [Date.now()]
         };
       }
     } else {
@@ -177,6 +183,9 @@ export default function App() {
         if (userData && userData.expiryDate && Date.now() > userData.expiryDate) {
           setLoginError('Tài khoản dùng thử 7 ngày của bạn đã hết hạn. Vui lòng liên hệ Admin để gia hạn.');
           return;
+        }
+        if (userData) {
+          userData.loginDates = [...(userData.loginDates || []), Date.now()];
         }
       } else {
         // New Public User
@@ -197,7 +206,9 @@ export default function App() {
           proficiencyLevel: 3,
           history: [],
           isVip: false,
-          expiryDate: expiry
+          isAdmin: false,
+          expiryDate: expiry,
+          loginDates: [Date.now()]
         };
       }
     }
@@ -358,7 +369,8 @@ export default function App() {
       grade: 11,
       numerologyNumber: 0,
       proficiencyLevel: 3,
-      history: []
+      history: [],
+      loginDates: []
     });
     setLoginError('');
     setCurrentScreen(ScreenName.WELCOME);
@@ -426,6 +438,8 @@ export default function App() {
         return <ParentReportScreen user={user} />;
       case ScreenName.HISTORY:
         return <HistoryScreen user={user} />;
+      case ScreenName.ADMIN_STATISTICS:
+        return <AdminStatisticsScreen />;
       case ScreenName.CHAT:
         return <ChatScreen user={user} />;
       case ScreenName.GAMES:
@@ -444,7 +458,8 @@ export default function App() {
     ScreenName.CHAT,
     ScreenName.GAMES,
     ScreenName.SETTINGS,
-    ScreenName.HISTORY
+    ScreenName.HISTORY,
+    ScreenName.ADMIN_STATISTICS
   ].includes(currentScreen);
 
   return (
@@ -490,7 +505,7 @@ export default function App() {
 
         {/* Bottom Navigation for Mobile */}
         {isNavigable && (
-          <BottomNavigation currentScreen={currentScreen} onNavigate={setCurrentScreen} />
+          <BottomNavigation currentScreen={currentScreen} onNavigate={setCurrentScreen} user={user} />
         )}
       </div>
     </div>

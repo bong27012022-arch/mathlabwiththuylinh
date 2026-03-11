@@ -14,7 +14,8 @@ export enum ScreenName {
   CHAT = 'CHAT',
   GAMES = 'GAMES',
   SETTINGS = 'SETTINGS',
-  HISTORY = 'HISTORY'
+  HISTORY = 'HISTORY',
+  ADMIN_STATISTICS = 'ADMIN_STATISTICS'
 }
 
 export interface NumerologyProfile {
@@ -31,7 +32,7 @@ export interface NumerologyProfile {
   learningMethods: string;    // 8. PHƯƠNG PHÁP HỌC HIỆU QUẢ
   environment: string;        // 9. MÔI TRƯỜNG HỌC TẬP LÝ TƯỞNG
   conclusion: string;         // 10. KẾT LUẬN KHUYẾN NGHỊ CHUNG
-  
+
   // Legacy fields (optional support)
   description?: string;
   weaknesses?: string[];
@@ -89,7 +90,7 @@ export interface UserProfile {
   name: string;
   dob: string;
   grade: number;
-  numerologyNumber: number; 
+  numerologyNumber: number;
   numerologyProfile?: NumerologyProfile;
   proficiencyLevel?: number; // 1: Weak, 2: Average, 3: Good, 4: Excellent
   learningHabits?: string[]; // New: Habits selected in Assessment
@@ -101,4 +102,6 @@ export interface UserProfile {
   completedGameIds?: string[]; // Track completed games
   expiryDate?: number; // Timestamp of expiry
   isVip?: boolean; // VIP status
+  loginDates?: number[]; // Timestamps of all logins
+  isAdmin?: boolean; // If this user is an admin
 }

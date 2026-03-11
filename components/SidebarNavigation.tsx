@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenName, UserProfile } from '../types';
-import { Home, Map, BarChart2, User, Gamepad2, LogOut, Calculator, Key, Settings, Clock, Crown, X, Check, CreditCard, History } from 'lucide-react';
+import { Home, Map, BarChart2, User, Gamepad2, LogOut, Calculator, Key, Settings, Clock, Crown, X, Check, CreditCard, History, TrendingUp } from 'lucide-react';
 
 interface Props {
   currentScreen: ScreenName;
@@ -22,6 +22,10 @@ export const SidebarNavigation: React.FC<Props> = ({ currentScreen, onNavigate, 
     { id: ScreenName.PARENT_REPORT, icon: BarChart2, label: 'Báo cáo phụ huynh' },
     { id: ScreenName.PROFILE, icon: User, label: 'Hồ sơ cá nhân' },
   ];
+
+  if (user.isAdmin) {
+    tabs.splice(2, 0, { id: ScreenName.ADMIN_STATISTICS, icon: TrendingUp, label: 'Thống kê Admin' });
+  }
 
   useEffect(() => {
     if (user.isVip || !user.expiryDate) {
