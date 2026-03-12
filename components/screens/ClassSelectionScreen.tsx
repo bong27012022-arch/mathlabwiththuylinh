@@ -115,18 +115,19 @@ const CURRICULUM_DATA: Record<number, Topic[]> = {
   ],
   11: [
     { id: 'g11-trig', label: 'Lượng giác', subLabel: 'Hàm số & Phương trình LG', icon: Activity },
-    { id: 'g11-seq', label: 'Dãy số', subLabel: 'Cấp số cộng, Cấp số nhân', icon: Layers },
-    { id: 'g11-lim', label: 'Giới hạn & Liên tục', subLabel: 'Lim dãy số, Lim hàm số', icon: Sigma },
-    { id: 'g11-geo', label: 'Hình học không gian', subLabel: 'Đường thẳng, Mặt phẳng, Góc', icon: Box },
-    { id: 'g11-prob', label: 'Xác suất', subLabel: 'Biến cố hợp, giao, độc lập', icon: Lightbulb },
+    { id: 'g11-seq', label: 'Dãy số & Giới hạn', subLabel: 'Cấp số, Giới hạn, Liên tục', icon: Sigma },
+    { id: 'g11-exp', label: 'Hàm số mũ & Lôgarit', subLabel: 'Lũy thừa, Lôgarit, Phương trình', icon: TrendingUp },
+    { id: 'g11-geo', label: 'Quan hệ vuông góc', subLabel: 'Đường, Mặt phẳng vuông góc', icon: Box },
+    { id: 'g11-prob', label: 'Tính xác suất', subLabel: 'Biến cố hợp, giao, độc lập', icon: PieChart },
+    { id: 'g11-deriv', label: 'Đạo hàm', subLabel: 'Quy tắc tính & Ý nghĩa', icon: FunctionSquare },
   ],
   12: [
     { id: 'g12-func', label: 'Ứng dụng đạo hàm', subLabel: 'Đơn điệu, Cực trị, Tiệm cận', icon: TrendingUp },
     { id: 'g12-vec', label: 'Vectơ không gian', subLabel: 'Hệ trục tọa độ Oxyz', icon: Box },
-    { id: 'g12-stat', label: 'Thống kê mô tả', subLabel: 'Các số đặc trưng mức độ phân tán', icon: BarChart2 },
-    { id: 'g12-int', label: 'Nguyên hàm Tích phân', subLabel: 'Diện tích, Thể tích', icon: Sigma },
-    { id: 'g12-prob', label: 'Xác suất có điều kiện', subLabel: 'Công thức xác suất toàn phần', icon: Lightbulb },
-    { id: 'g12-oxyz', label: 'Phương pháp tọa độ', subLabel: 'Phương trình mặt phẳng, đường thẳng', icon: PenTool },
+    { id: 'g12-stat', label: 'Thống kê mẫu ghép nhóm', subLabel: 'Các số đặc trưng đo phân tán', icon: BarChart2 },
+    { id: 'g12-int', label: 'Nguyên hàm & Tích phân', subLabel: 'Tính toán & Ứng dụng hình học', icon: Sigma },
+    { id: 'g12-oxyz', label: 'Tọa độ trong không gian', subLabel: 'Mặt phẳng, Đường thẳng, Mặt cầu', icon: PenTool },
+    { id: 'g12-prob', label: 'Xác suất có điều kiện', subLabel: 'Xác suất toàn phần & CT Bayes', icon: PieChart },
   ]
 };
 
@@ -264,8 +265,8 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
                 key={level.id}
                 onClick={() => handleLevelChange(level.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200 ${isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
               >
                 <Icon size={16} className={isActive ? 'text-white' : 'text-gray-400 dark:text-gray-500'} />
@@ -341,8 +342,8 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
                 >
                   <div className="flex justify-between w-full mb-3">
                     <div className={`p-2 rounded-lg ${isSelected
-                        ? (isSpecial ? 'bg-red-200 text-red-900' : isReview ? 'bg-orange-200 text-orange-900' : 'bg-primary/20 text-teal-900')
-                        : (isSpecial ? 'bg-red-100 text-red-700' : isReview ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300')
+                      ? (isSpecial ? 'bg-red-200 text-red-900' : isReview ? 'bg-orange-200 text-orange-900' : 'bg-primary/20 text-teal-900')
+                      : (isSpecial ? 'bg-red-100 text-red-700' : isReview ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300')
                       }`}>
                       <Icon className="w-5 h-5" />
                     </div>
