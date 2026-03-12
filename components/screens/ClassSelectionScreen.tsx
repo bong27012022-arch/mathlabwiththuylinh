@@ -117,20 +117,23 @@ const CURRICULUM_DATA: Record<number, Topic[]> = {
     { id: 'g10-prac', label: 'Thực hành trải nghiệm', subLabel: 'Toán học thực tiễn', icon: Sparkles },
   ],
   11: [
-    { id: 'g11-trig', label: 'Lượng giác', subLabel: 'Hàm số & Phương trình LG', icon: Activity },
-    { id: 'g11-seq', label: 'Dãy số & Giới hạn', subLabel: 'Cấp số, Giới hạn, Liên tục', icon: Sigma },
-    { id: 'g11-exp', label: 'Hàm số mũ & Lôgarit', subLabel: 'Lũy thừa, Lôgarit, Phương trình', icon: TrendingUp },
-    { id: 'g11-geo', label: 'Quan hệ vuông góc', subLabel: 'Đường, Mặt phẳng vuông góc', icon: Box },
-    { id: 'g11-prob', label: 'Tính xác suất', subLabel: 'Biến cố hợp, giao, độc lập', icon: PieChart },
+    { id: 'g11-trig', label: 'Hàm số lượng giác', subLabel: 'Hàm số & Phương trình LG', icon: Activity },
+    { id: 'g11-seq', label: 'Dãy số', subLabel: 'Cấp số cộng & nhân', icon: Layers },
+    { id: 'g11-lim', label: 'Giới hạn & Liên tục', subLabel: 'Lim dãy số, Lim hàm số', icon: Sigma },
+    { id: 'g11-geo', label: 'Quan hệ song song', subLabel: 'Không gian, đường thẳng, mặt phẳng', icon: Box },
+    { id: 'g11-stat', label: 'Thống kê (Ghép nhóm)', subLabel: 'Đo xu thế trung tâm', icon: BarChart2 },
+    { id: 'g11-exp', label: 'Mũ & Lôgarit', subLabel: 'Hàm số, Lũy thừa, Phương trình', icon: TrendingUp },
     { id: 'g11-deriv', label: 'Đạo hàm', subLabel: 'Quy tắc tính & Ý nghĩa', icon: FunctionSquare },
+    { id: 'g11-perp', label: 'Quan hệ vuông góc', subLabel: 'Vuông góc & Phép chiếu trong KG', icon: Triangle },
+    { id: 'g11-prob', label: 'Biến cố & Xác suất', subLabel: 'Tính xác suất các biến cố', icon: PieChart },
   ],
   12: [
-    { id: 'g12-func', label: 'Ứng dụng đạo hàm', subLabel: 'Đơn điệu, Cực trị, Tiệm cận', icon: TrendingUp },
-    { id: 'g12-vec', label: 'Vectơ không gian', subLabel: 'Hệ trục tọa độ Oxyz', icon: Box },
-    { id: 'g12-stat', label: 'Thống kê mẫu ghép nhóm', subLabel: 'Các số đặc trưng đo phân tán', icon: BarChart2 },
+    { id: 'g12-func', label: 'Ứng dụng đạo hàm', subLabel: 'Khảo sát và vẽ đồ thị hàm số', icon: TrendingUp },
+    { id: 'g12-vec', label: 'Vectơ trong không gian', subLabel: 'Phương pháp tọa độ Oxyz', icon: Box },
+    { id: 'g12-stat', label: 'Đo mức độ phân tán', subLabel: 'Biến thiên, phương sai, độ lệch chuẩn', icon: BarChart2 },
     { id: 'g12-int', label: 'Nguyên hàm & Tích phân', subLabel: 'Tính toán & Ứng dụng hình học', icon: Sigma },
-    { id: 'g12-oxyz', label: 'Tọa độ trong không gian', subLabel: 'Mặt phẳng, Đường thẳng, Mặt cầu', icon: PenTool },
-    { id: 'g12-prob', label: 'Xác suất có điều kiện', subLabel: 'Xác suất toàn phần & CT Bayes', icon: PieChart },
+    { id: 'g12-oxyz', label: 'Tọa độ trong không gian', subLabel: 'Phương trình mặt phẳng, đường thẳng, mặt cầu', icon: PenTool },
+    { id: 'g12-prob', label: 'Xác suất có điều kiện', subLabel: 'Sơ đồ hình cây & Xác suất toàn phần', icon: PieChart },
   ]
 };
 
