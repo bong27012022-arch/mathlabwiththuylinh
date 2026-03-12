@@ -106,12 +106,15 @@ const CURRICULUM_DATA: Record<number, Topic[]> = {
   ],
   10: [
     { id: 'g10-prop', label: 'Mệnh đề & Tập hợp', subLabel: 'Logic toán học cơ bản', icon: Binary },
-    { id: 'g10-ineq', label: 'Bất phương trình', subLabel: 'BPT & Hệ BPT bậc nhất hai ẩn', icon: Scale },
-    { id: 'g10-vec', label: 'Hệ thức lượng & Vectơ', subLabel: 'Tổng, Hiệu, Tích vô hướng', icon: ArrowLeft },
+    { id: 'g10-ineq', label: 'BPT & Hệ BPT', subLabel: 'Bất phương trình bậc nhất hai ẩn', icon: Scale },
+    { id: 'g10-trig', label: 'Hệ thức lượng', subLabel: 'Trong tam giác', icon: Triangle },
+    { id: 'g10-vec', label: 'Vectơ', subLabel: 'Các phép toán trên vectơ', icon: ArrowLeft },
+    { id: 'g10-stat', label: 'Thống kê (Không ghép nhóm)', subLabel: 'Các số đặc trưng', icon: BarChart2 },
     { id: 'g10-func', label: 'Hàm số & Đồ thị', subLabel: 'Hàm số, Bậc hai, Dấu tam thức', icon: TrendingUp },
-    { id: 'g10-coord2d', label: 'Phương pháp tọa độ', subLabel: 'Đường thẳng, Đường tròn, Conic', icon: Shapes },
+    { id: 'g10-coord2d', label: 'Phương pháp tọa độ', subLabel: 'Mặt phẳng tọa độ', icon: Shapes },
     { id: 'g10-comb', label: 'Đại số tổ hợp', subLabel: 'Quy tắc đếm, Hoán vị, Nhị thức', icon: Layers },
     { id: 'g10-prob', label: 'Xác suất cổ điển', subLabel: 'Định nghĩa cổ điển của xác suất', icon: PieChart },
+    { id: 'g10-prac', label: 'Thực hành trải nghiệm', subLabel: 'Toán học thực tiễn', icon: Sparkles },
   ],
   11: [
     { id: 'g11-trig', label: 'Lượng giác', subLabel: 'Hàm số & Phương trình LG', icon: Activity },
