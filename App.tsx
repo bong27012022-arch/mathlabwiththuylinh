@@ -30,6 +30,14 @@ const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 const API_KEY_STORAGE = 'GEMINI_API_KEY';
 const MODEL_STORAGE = 'GEMINI_MODEL_PREF';
 
+const removeAccents = (str: string) => {
+  return str.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .trim().toLowerCase();
+};
+
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(ScreenName.WELCOME);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -123,11 +131,11 @@ export default function App() {
   const handleLogin = (name: string, dob: string) => {
     const inputName = name.trim().toLowerCase();
     const inputDob = dob.trim();
-    const dbId = `${inputName}_${inputDob}`;
+    const normalizedInputName = removeAccents(inputName);
 
     // 1. Check if it's a Pre-defined Student Account
     const student = STUDENT_ACCOUNTS.find(s =>
-      s.name.toLowerCase() === inputName && s.dob === inputDob
+      removeAccents(s.name) === normalizedInputName && s.dob === inputDob
     );
 
     // 2. Load DB
@@ -139,6 +147,14 @@ export default function App() {
 
     let userData: UserProfile | null = null;
     let isNewPublicUser = false;
+
+    // Find the actual dbId that matches, disregarding NFC/NFD or accents
+    const matchedDbId = Object.keys(db).find(key => {
+      const [kName, kDob] = key.split('_');
+      return removeAccents(kName) === normalizedInputName && kDob === inputDob;
+    });
+
+    const dbId = matchedDbId || `${inputName}_${inputDob}`;
 
     if (student) {
       // --- CASE A: Pre-defined Student ---
