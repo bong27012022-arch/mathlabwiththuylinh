@@ -22,6 +22,7 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { analyzeProfile } from './utils/numerology';
 import { calculateGradeLevelFromBirthDate } from './utils/gradeCalculator';
 import { generateLearningPath, generateChallengeUnit, generateComprehensiveTest, setGlobalApiKey, setGlobalModel } from './utils/aiGenerator';
+import { getStudentDbId, removeAccents } from './utils/userUtils';
 import { Loader2 } from 'lucide-react';
 import { STUDENT_ACCOUNTS } from './data/studentAccounts';
 
@@ -30,12 +31,6 @@ const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 const API_KEY_STORAGE = 'GEMINI_API_KEY';
 const MODEL_STORAGE = 'GEMINI_MODEL_PREF';
 
-const removeAccents = (str: string) => {
-  return str.normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-    .trim().toLowerCase();
-};
 
 
 export default function App() {
@@ -98,7 +93,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     if (user.name && user.dob) {
-      const dbId = `${user.name.trim().toLowerCase()}_${user.dob.trim()}`;
+      const dbId = getStudentDbId(user.name, user.dob);
       try {
         const rawDb = localStorage.getItem(STUDENT_DB_KEY);
         const db = rawDb ? JSON.parse(rawDb) : {};
@@ -147,28 +142,50 @@ export default function App() {
 
     let userData: UserProfile | null = null;
     let isNewPublicUser = false;
+    const dbId = getStudentDbId(inputName, inputDob);
 
-    // Find the actual dbId that matches, disregarding NFC/NFD or accents
-    const matchedDbId = Object.keys(db).find(key => {
+    // --- DATA MIGRATION / MERGING ---
+    // Check if there are other entries that normalize to the same dbId and merge them
+    let mergedHistory: QuizResult[] = [];
+    let mergedLoginDates: number[] = [];
+    let existingProfile: UserProfile | null = null;
+
+    Object.keys(db).forEach(key => {
       const [kName, kDob] = key.split('_');
-      return removeAccents(kName) === normalizedInputName && kDob === inputDob;
+      if (removeAccents(kName) === removeAccents(inputName) && kDob === inputDob) {
+        const record = db[key];
+        if (record.history) mergedHistory = [...mergedHistory, ...record.history];
+        if (record.loginDates) mergedLoginDates = [...mergedLoginDates, ...record.loginDates];
+        if (!existingProfile || (record.learningPath && record.learningPath.length > 0)) {
+          existingProfile = record;
+        }
+        // If the key is not the canonical dbId, we'll eventually replace it
+        if (key !== dbId) {
+          delete db[key];
+        }
+      }
     });
 
-    const dbId = matchedDbId || `${inputName}_${inputDob}`;
+    // De-duplicate history based on timestamp and unitId
+    const uniqueHistory = mergedHistory.filter((v, i, a) =>
+      a.findIndex(t => t.timestamp === v.timestamp && t.unitId === v.unitId) === i
+    ).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    const uniqueLogins = Array.from(new Set(mergedLoginDates)).sort((a, b) => b - a);
 
     if (student) {
       // --- CASE A: Pre-defined Student ---
-      if (db[dbId]) {
-        // User exists in DB, merge with config
-        userData = db[dbId];
-        userData!.isVip = student.isVip;
-        userData!.isAdmin = student.isAdmin;
-        userData!.loginDates = [...(userData!.loginDates || []), Date.now()];
-
-        // Refresh expiry if config changes (optional, but good for admin control)
-        const limitDays = student.limitDays || 90;
-        // If existing user has expired but is in STUDENT_ACCOUNTS, maybe reset? 
-        // For now, let's assume STUDENT_ACCOUNTS always get fresh logic or respect DB
+      if (existingProfile) {
+        const profile = existingProfile as UserProfile;
+        userData = {
+          ...profile,
+          history: uniqueHistory,
+          loginDates: [Date.now(), ...uniqueLogins].slice(0, 50),
+          isVip: student.isVip,
+          isAdmin: student.isAdmin,
+          name: student.name,
+          dob: student.dob
+        };
       } else {
         // First time login for Pre-defined student
         const analysis = analyzeProfile(student.name, student.dob);
@@ -192,29 +209,31 @@ export default function App() {
       }
     } else {
       // --- CASE B: Public / Trial User ---
-      if (db[dbId]) {
-        // Existing Public User
-        userData = db[dbId];
+      if (existingProfile) {
+        const profile = existingProfile as UserProfile;
+        userData = {
+          ...profile,
+          history: uniqueHistory,
+          loginDates: [Date.now(), ...uniqueLogins].slice(0, 50),
+          expiryDate: profile.expiryDate
+        };
+
         // CHECK EXPIRATION
-        if (userData && userData.expiryDate && Date.now() > userData.expiryDate) {
+        if (userData.expiryDate && Date.now() > userData.expiryDate) {
           setLoginError('Tài khoản dùng thử 7 ngày của bạn đã hết hạn. Vui lòng liên hệ Admin để gia hạn.');
           return;
-        }
-        if (userData) {
-          userData.loginDates = [...(userData.loginDates || []), Date.now()];
         }
       } else {
         // New Public User
         isNewPublicUser = true;
-        const analysis = analyzeProfile(name, dob); // Use original name casing for analysis
+        const analysis = analyzeProfile(name, dob);
         const gradeInfo = calculateGradeLevelFromBirthDate(dob) as any;
 
-        // 90 DAYS FOR PUBLIC USERS
         const TRIAL_DAYS = 90;
         const expiry = Date.now() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
         userData = {
-          name: name, // Preserve original casing input
+          name: name,
           dob: dob,
           grade: (gradeInfo.isValid ? gradeInfo.grade : 10) || 10,
           numerologyNumber: analysis.lifePathNumber,
@@ -229,11 +248,16 @@ export default function App() {
       }
     }
 
+    // Save cleaned DB back
     if (userData) {
-      setUser(userData);
+      const finalUser = userData as UserProfile;
+      db[dbId] = finalUser;
+      localStorage.setItem(STUDENT_DB_KEY, JSON.stringify(db));
+
+      setUser(finalUser);
       setLoginError('');
 
-      if (userData.learningPath && userData.learningPath.length > 0) {
+      if (finalUser.learningPath && finalUser.learningPath.length > 0) {
         setCurrentScreen(ScreenName.LEARNING_PATH);
       } else {
         // If it's a new public user or incomplete profile
