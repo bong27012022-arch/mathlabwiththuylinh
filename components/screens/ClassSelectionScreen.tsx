@@ -17,28 +17,28 @@ type EducationLevel = 'primary' | 'middle' | 'high';
 
 // Standard Exam Review Topics
 const STANDARD_REVIEWS: Topic[] = [
-    { id: 'review-mid-1', label: 'Ôn tập Giữa Học kỳ 1', subLabel: 'Tổng hợp kiến thức SGK', icon: FileText, isReview: true },
-    { id: 'review-end-1', label: 'Ôn tập Cuối Học kỳ 1', subLabel: 'Đề thi thử & Tổng hợp', icon: FileText, isReview: true },
-    { id: 'review-mid-2', label: 'Ôn tập Giữa Học kỳ 2', subLabel: 'Tổng hợp kiến thức SGK', icon: FileText, isReview: true },
-    { id: 'review-end-2', label: 'Ôn tập Cuối Học kỳ 2', subLabel: 'Đề thi thử & Tổng hợp', icon: FileText, isReview: true },
+  { id: 'review-mid-1', label: 'Ôn tập Giữa Học kỳ 1', subLabel: 'Tổng hợp kiến thức SGK', icon: FileText, isReview: true },
+  { id: 'review-end-1', label: 'Ôn tập Cuối Học kỳ 1', subLabel: 'Đề thi thử & Tổng hợp', icon: FileText, isReview: true },
+  { id: 'review-mid-2', label: 'Ôn tập Giữa Học kỳ 2', subLabel: 'Tổng hợp kiến thức SGK', icon: FileText, isReview: true },
+  { id: 'review-end-2', label: 'Ôn tập Cuối Học kỳ 2', subLabel: 'Đề thi thử & Tổng hợp', icon: FileText, isReview: true },
 ];
 
-const GRADE_9_ENTRANCE_EXAM: Topic = { 
-    id: 'review-grade-10', 
-    label: 'Ôn thi vào 10', 
-    subLabel: 'Luyện đề Toán chuyên & Đại trà', 
-    icon: GraduationCap, 
-    isReview: true,
-    isSpecialExam: true 
+const GRADE_9_ENTRANCE_EXAM: Topic = {
+  id: 'review-grade-10',
+  label: 'Ôn thi vào 10',
+  subLabel: 'Luyện đề Toán chuyên & Đại trà',
+  icon: GraduationCap,
+  isReview: true,
+  isSpecialExam: true
 };
 
-const GRADE_12_GRADUATION_EXAM: Topic = { 
-    id: 'review-graduation', 
-    label: 'Ôn thi Tốt nghiệp THPT', 
-    subLabel: 'Luyện đề Đại học & Tốt nghiệp', 
-    icon: GraduationCap, 
-    isReview: true,
-    isSpecialExam: true 
+const GRADE_12_GRADUATION_EXAM: Topic = {
+  id: 'review-graduation',
+  label: 'Ôn thi Tốt nghiệp THPT',
+  subLabel: 'Luyện đề Đại học & Tốt nghiệp',
+  icon: GraduationCap,
+  isReview: true,
+  isSpecialExam: true
 };
 
 const CURRICULUM_DATA: Record<number, Topic[]> = {
@@ -106,10 +106,12 @@ const CURRICULUM_DATA: Record<number, Topic[]> = {
   ],
   10: [
     { id: 'g10-prop', label: 'Mệnh đề & Tập hợp', subLabel: 'Logic toán học cơ bản', icon: Binary },
-    { id: 'g10-ineq', label: 'Bất phương trình', subLabel: 'BPT bậc nhất hai ẩn', icon: Scale },
-    { id: 'g10-func', label: 'Hàm số bậc hai', subLabel: 'Parabol & Dấu tam thức', icon: TrendingUp },
-    { id: 'g10-vec', label: 'Vectơ & Tọa độ', subLabel: 'Tổng, Hiệu, Tích vô hướng', icon: ArrowLeft },
-    { id: 'g10-stat', label: 'Thống kê & Xác suất', subLabel: 'Số đặc trưng, Quy tắc đếm', icon: BarChart2 },
+    { id: 'g10-ineq', label: 'Bất phương trình', subLabel: 'BPT & Hệ BPT bậc nhất hai ẩn', icon: Scale },
+    { id: 'g10-vec', label: 'Hệ thức lượng & Vectơ', subLabel: 'Tổng, Hiệu, Tích vô hướng', icon: ArrowLeft },
+    { id: 'g10-func', label: 'Hàm số & Đồ thị', subLabel: 'Hàm số, Bậc hai, Dấu tam thức', icon: TrendingUp },
+    { id: 'g10-coord2d', label: 'Phương pháp tọa độ', subLabel: 'Đường thẳng, Đường tròn, Conic', icon: Shapes },
+    { id: 'g10-comb', label: 'Đại số tổ hợp', subLabel: 'Quy tắc đếm, Hoán vị, Nhị thức', icon: Layers },
+    { id: 'g10-prob', label: 'Xác suất cổ điển', subLabel: 'Định nghĩa cổ điển của xác suất', icon: PieChart },
   ],
   11: [
     { id: 'g11-trig', label: 'Lượng giác', subLabel: 'Hàm số & Phương trình LG', icon: Activity },
@@ -141,11 +143,11 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
   const initialGrade = gradeCalc.isValid ? (gradeCalc.grade || 11) : 11;
 
   const getLevelFromGrade = (grade: number): EducationLevel => {
-      if (grade <= 5) return 'primary';
-      if (grade <= 9) return 'middle';
-      return 'high';
+    if (grade <= 5) return 'primary';
+    if (grade <= 9) return 'middle';
+    return 'high';
   };
-  
+
   const [educationLevel, setEducationLevel] = useState<EducationLevel>(getLevelFromGrade(initialGrade));
   const [selectedGrade, setSelectedGrade] = useState<number>(initialGrade);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -161,15 +163,15 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
   useEffect(() => {
     const baseTopics = CURRICULUM_DATA[selectedGrade] || [];
     let allTopics = [...baseTopics, ...STANDARD_REVIEWS];
-    
+
     if (selectedGrade === 9) {
-        allTopics.push(GRADE_9_ENTRANCE_EXAM);
+      allTopics.push(GRADE_9_ENTRANCE_EXAM);
     } else if (selectedGrade === 12) {
-        allTopics.push(GRADE_12_GRADUATION_EXAM);
+      allTopics.push(GRADE_12_GRADUATION_EXAM);
     }
 
     setTopics(allTopics);
-    
+
     if (baseTopics.length >= 3) {
       setSelectedTopics(baseTopics.slice(0, 3).map(t => t.id));
     } else {
@@ -181,7 +183,7 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
     setEducationLevel(level);
     const levelData = levels.find(l => l.id === level);
     if (levelData && !levelData.grades.includes(selectedGrade)) {
-        setSelectedGrade(levelData.grades[0]);
+      setSelectedGrade(levelData.grades[0]);
     }
   };
 
@@ -219,8 +221,8 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
 
   const handleCreatePath = () => {
     const selectedTopicLabels = topics
-        .filter(t => selectedTopics.includes(t.id))
-        .map(t => t.label);
+      .filter(t => selectedTopics.includes(t.id))
+      .map(t => t.label);
     onNext(selectedGrade, selectedTopicLabels);
   };
 
@@ -247,9 +249,9 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
         <div className="mb-4 text-center md:text-left">
           <h2 className="text-[28px] font-bold leading-tight mb-2">Chọn lớp học của bạn</h2>
           <p className="text-teal-800/70 dark:text-gray-400 text-base font-normal">
-             {gradeCalc.isValid 
-               ? `Dựa trên ngày sinh, AI đề xuất bạn đang học lớp ${gradeCalc.grade} (${gradeCalc.schoolYear}).` 
-               : "Vui lòng chọn lớp học phù hợp với trình độ của bạn."}
+            {gradeCalc.isValid
+              ? `Dựa trên ngày sinh, AI đề xuất bạn đang học lớp ${gradeCalc.grade} (${gradeCalc.schoolYear}).`
+              : "Vui lòng chọn lớp học phù hợp với trình độ của bạn."}
           </p>
         </div>
 
@@ -261,11 +263,10 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
               <button
                 key={level.id}
                 onClick={() => handleLevelChange(level.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200 ${
-                  isActive 
-                  ? 'bg-primary text-white shadow-md' 
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200 ${isActive
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
               >
                 <Icon size={16} className={isActive ? 'text-white' : 'text-gray-400 dark:text-gray-500'} />
                 {level.label}
@@ -279,12 +280,12 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
             {currentLevelData?.grades.map((grade) => {
               const isSelected = selectedGrade === grade;
               return (
-                <button 
-                  key={grade} 
+                <button
+                  key={grade}
                   onClick={() => setSelectedGrade(grade)}
                   className={`relative flex h-14 min-w-[80px] shrink-0 items-center justify-center rounded-2xl transition-all shadow-sm
-                    ${isSelected 
-                      ? 'bg-white dark:bg-dark-surface border-2 border-primary text-teal-900 dark:text-white font-bold scale-105 shadow-md z-10' 
+                    ${isSelected
+                      ? 'bg-white dark:bg-dark-surface border-2 border-primary text-teal-900 dark:text-white font-bold scale-105 shadow-md z-10'
                       : 'bg-white dark:bg-dark-surface border border-teal-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary/50'
                     }`}
                 >
@@ -307,7 +308,7 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
             <h3 className="text-2xl font-bold leading-tight mb-1">Chủ đề & Ôn thi</h3>
             <p className="text-sm text-teal-800/70 dark:text-gray-400">Nội dung SGK KNTT Lớp {selectedGrade}</p>
           </div>
-          <button 
+          <button
             onClick={selectAllTopics}
             className="text-sm font-medium text-teal-700 dark:text-primary hover:underline pb-1"
           >
@@ -316,100 +317,99 @@ export const ClassSelectionScreen: React.FC<Props> = ({ user, onNext, onBack, is
         </div>
 
         {topics.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-              <Sparkles className="w-10 h-10 mb-2 opacity-50" />
-              <p>Chưa có dữ liệu cho lớp này</p>
-           </div>
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+            <Sparkles className="w-10 h-10 mb-2 opacity-50" />
+            <p>Chưa có dữ liệu cho lớp này</p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
-              {topics.map((topic) => {
-                const isSelected = selectedTopics.includes(topic.id);
-                const Icon = topic.icon;
-                const isReview = topic.isReview;
-                const isSpecial = topic.isSpecialExam;
-                
-                return (
-                  <div 
-                    key={topic.id}
-                    onClick={() => toggleTopic(topic.id)}
-                    className={`relative flex flex-col items-start p-4 rounded-2xl cursor-pointer transition-all duration-200
-                      ${isSelected 
-                        ? (isSpecial ? 'bg-red-50 border-2 border-red-500 dark:bg-red-900/10' : isReview ? 'bg-orange-50 border-2 border-orange-400 dark:bg-orange-900/10' : 'bg-white dark:bg-dark-surface border-2 border-primary shadow-sm') 
-                        : (isSpecial ? 'bg-red-50/50 border border-red-200 dark:border-red-800/30' : isReview ? 'bg-orange-50/50 border border-orange-200 dark:border-orange-800/30' : 'bg-white/60 dark:bg-dark-surface border border-transparent dark:border-gray-700 hover:bg-white hover:shadow-md')
-                      }`}
-                  >
-                      <div className="flex justify-between w-full mb-3">
-                        <div className={`p-2 rounded-lg ${
-                            isSelected 
-                                ? (isSpecial ? 'bg-red-200 text-red-900' : isReview ? 'bg-orange-200 text-orange-900' : 'bg-primary/20 text-teal-900') 
-                                : (isSpecial ? 'bg-red-100 text-red-700' : isReview ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300')
-                        }`}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        {isSelected ? (
-                          <div className={isSpecial ? 'text-red-500' : isReview ? 'text-orange-500' : 'text-primary'}><Check className="w-5 h-5 fill-current" /></div>
-                        ) : (
-                          <div className={`w-5 h-5 rounded-full border-2 ${isSpecial ? 'border-red-200' : isReview ? 'border-orange-200' : 'border-gray-300 dark:border-gray-600'}`}></div>
-                        )}
-                      </div>
-                      <span className={`text-lg font-bold leading-tight ${isSpecial ? 'text-red-900 dark:text-red-100' : isReview ? 'text-orange-900 dark:text-orange-100' : ''}`}>{topic.label}</span>
-                      <span className={`text-xs mt-1 truncate w-full ${isSpecial ? 'text-red-700 dark:text-red-200' : isReview ? 'text-orange-700 dark:text-orange-200' : 'text-gray-500 dark:text-gray-400'}`}>{topic.subLabel}</span>
+            {topics.map((topic) => {
+              const isSelected = selectedTopics.includes(topic.id);
+              const Icon = topic.icon;
+              const isReview = topic.isReview;
+              const isSpecial = topic.isSpecialExam;
+
+              return (
+                <div
+                  key={topic.id}
+                  onClick={() => toggleTopic(topic.id)}
+                  className={`relative flex flex-col items-start p-4 rounded-2xl cursor-pointer transition-all duration-200
+                      ${isSelected
+                      ? (isSpecial ? 'bg-red-50 border-2 border-red-500 dark:bg-red-900/10' : isReview ? 'bg-orange-50 border-2 border-orange-400 dark:bg-orange-900/10' : 'bg-white dark:bg-dark-surface border-2 border-primary shadow-sm')
+                      : (isSpecial ? 'bg-red-50/50 border border-red-200 dark:border-red-800/30' : isReview ? 'bg-orange-50/50 border border-orange-200 dark:border-orange-800/30' : 'bg-white/60 dark:bg-dark-surface border border-transparent dark:border-gray-700 hover:bg-white hover:shadow-md')
+                    }`}
+                >
+                  <div className="flex justify-between w-full mb-3">
+                    <div className={`p-2 rounded-lg ${isSelected
+                        ? (isSpecial ? 'bg-red-200 text-red-900' : isReview ? 'bg-orange-200 text-orange-900' : 'bg-primary/20 text-teal-900')
+                        : (isSpecial ? 'bg-red-100 text-red-700' : isReview ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300')
+                      }`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    {isSelected ? (
+                      <div className={isSpecial ? 'text-red-500' : isReview ? 'text-orange-500' : 'text-primary'}><Check className="w-5 h-5 fill-current" /></div>
+                    ) : (
+                      <div className={`w-5 h-5 rounded-full border-2 ${isSpecial ? 'border-red-200' : isReview ? 'border-orange-200' : 'border-gray-300 dark:border-gray-600'}`}></div>
+                    )}
                   </div>
-                );
-              })}
+                  <span className={`text-lg font-bold leading-tight ${isSpecial ? 'text-red-900 dark:text-red-100' : isReview ? 'text-orange-900 dark:text-orange-100' : ''}`}>{topic.label}</span>
+                  <span className={`text-xs mt-1 truncate w-full ${isSpecial ? 'text-red-700 dark:text-red-200' : isReview ? 'text-orange-700 dark:text-orange-200' : 'text-gray-500 dark:text-gray-400'}`}>{topic.subLabel}</span>
+                </div>
+              );
+            })}
           </div>
         )}
 
         <div className="mt-4 mb-2 max-w-lg">
-           <h3 className="text-lg font-bold leading-tight mb-3">Chủ đề khác?</h3>
-           <div className="relative flex items-center shadow-sm rounded-2xl bg-white dark:bg-dark-surface border border-teal-100 dark:border-gray-700 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Edit3 className="text-gray-400 w-5 h-5" />
-              </div>
-              <input 
-                className="block w-full p-4 pl-12 pr-20 text-sm text-gray-900 bg-transparent border-none rounded-2xl focus:ring-0 placeholder-gray-400 dark:text-white" 
-                placeholder="Nhập chủ đề bạn muốn học thêm..." 
-                type="text"
-                value={customTopicInput}
-                onChange={(e) => setCustomTopicInput(e.target.value)}
-              />
-              <button 
-                onClick={handleAddTopic}
-                disabled={!customTopicInput.trim()}
-                className="absolute right-2.5 bottom-2.5 bg-primary/10 hover:bg-primary hover:text-white text-teal-800 font-medium rounded-lg text-sm px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                 <Plus className="w-4 h-4" />
-                 Thêm
-              </button>
-           </div>
+          <h3 className="text-lg font-bold leading-tight mb-3">Chủ đề khác?</h3>
+          <div className="relative flex items-center shadow-sm rounded-2xl bg-white dark:bg-dark-surface border border-teal-100 dark:border-gray-700 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Edit3 className="text-gray-400 w-5 h-5" />
+            </div>
+            <input
+              className="block w-full p-4 pl-12 pr-20 text-sm text-gray-900 bg-transparent border-none rounded-2xl focus:ring-0 placeholder-gray-400 dark:text-white"
+              placeholder="Nhập chủ đề bạn muốn học thêm..."
+              type="text"
+              value={customTopicInput}
+              onChange={(e) => setCustomTopicInput(e.target.value)}
+            />
+            <button
+              onClick={handleAddTopic}
+              disabled={!customTopicInput.trim()}
+              className="absolute right-2.5 bottom-2.5 bg-primary/10 hover:bg-primary hover:text-white text-teal-800 font-medium rounded-lg text-sm px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm
+            </button>
+          </div>
         </div>
-        
+
         <div className="h-10"></div>
       </div>
 
-       <div className="fixed bottom-0 left-0 md:left-64 right-0 w-full p-4 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-lg border-t border-teal-100 dark:border-gray-800 z-20">
-         <div className="max-w-md mx-auto">
-            <button 
+      <div className="fixed bottom-0 left-0 md:left-64 right-0 w-full p-4 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-lg border-t border-teal-100 dark:border-gray-800 z-20">
+        <div className="max-w-md mx-auto">
+          <button
             onClick={handleCreatePath}
             disabled={selectedTopics.length < 1 || isGenerating}
             className={`relative flex w-full items-center justify-center gap-2 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg overflow-hidden
                 ${selectedTopics.length < 1 || isGenerating
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-primary text-teal-950 shadow-primary/30 hover:bg-primary-dark hover:text-white'}`}
-            >
+          >
             {isGenerating ? (
-                <>
+              <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-lg font-bold leading-tight">Đang phân tích dữ liệu...</span>
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <BrainCircuit className="w-5 h-5" />
                 <span className="text-lg font-bold leading-tight">Tạo lộ trình tối ưu (AI)</span>
-                </>
+              </>
             )}
-            </button>
-         </div>
+          </button>
+        </div>
       </div>
     </div>
   );
