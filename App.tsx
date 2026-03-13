@@ -21,9 +21,17 @@ import { SidebarNavigation } from './components/SidebarNavigation';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { analyzeProfile } from './utils/numerology';
 import { calculateGradeLevelFromBirthDate } from './utils/gradeCalculator';
-import { generateLearningPath, generateChallengeUnit, generateComprehensiveTest, setGlobalApiKey, setGlobalModel } from './utils/aiGenerator';
+import { 
+  generateLearningPath, 
+  generateChallengeUnit, 
+  generateComprehensiveTest,
+  generateUnitQuestions,
+  generateEntertainmentContent,
+  setGlobalApiKey,
+  setGlobalModel
+} from './utils/aiGenerator';
 import { getStudentDbId, removeAccents } from './utils/userUtils';
-import { syncStudentData } from './utils/syncService';
+import { syncStudentData, fetchGlobalConfig, saveGlobalConfig, getSyncConfig, saveSyncConfig } from './utils/syncService';
 import { Loader2 } from 'lucide-react';
 import { STUDENT_ACCOUNTS } from './data/studentAccounts';
 
@@ -58,17 +66,38 @@ export default function App() {
       setGlobalApiKey(storedKey);
       setGlobalModel(storedModel);
     } else {
-      setShowKeyModal(true);
+      // Try to fetch from cloud before showing modal
+      loadGlobalConfigData().then(success => {
+        if (!success) setShowKeyModal(true);
+      });
     }
   }, []);
 
-  const handleSaveApiKey = (key: string, model: string) => {
+  const handleSaveApiKey = async (key: string, model: string) => {
     localStorage.setItem(API_KEY_STORAGE, key);
     localStorage.setItem(MODEL_STORAGE, model);
     setApiKey(key);
     setGlobalApiKey(key);
     setGlobalModel(model);
     setShowKeyModal(false);
+
+    // If admin, also save to cloud as master key
+    if (user.isAdmin) {
+      const confirmSave = window.confirm("Bạn là Admin, bạn có muốn lưu API Key VÀ Cấu hình Sync hiện tại lên Cloud làm 'Master Config' cho tất cả học sinh không?");
+      if (confirmSave) {
+        const syncConfig = getSyncConfig();
+        await saveGlobalConfig({ 
+          apiKey: key, 
+          model: model,
+          syncConfig: {
+            enabled: syncConfig.enabled,
+            databaseUrl: syncConfig.databaseUrl,
+            secretKey: syncConfig.secretKey
+          }
+        });
+        alert("Đã lưu Master Configuration lên Cloud!");
+      }
+    }
   };
 
   const [user, setUser] = useState<UserProfile>(() => {
@@ -90,6 +119,36 @@ export default function App() {
       loginDates: []
     };
   });
+
+  const loadGlobalConfigData = async () => {
+    try {
+      const config = await fetchGlobalConfig();
+      if (config) {
+        // AI Config
+        if (config.apiKey) {
+          localStorage.setItem(API_KEY_STORAGE, config.apiKey);
+          setApiKey(config.apiKey);
+          setGlobalApiKey(config.apiKey);
+        }
+        if (config.model) {
+          localStorage.setItem(MODEL_STORAGE, config.model);
+          setGlobalModel(config.model);
+        }
+        
+        // Sync Config
+        if (config.syncConfig) {
+          const currentSync = getSyncConfig();
+          const newSync = { ...currentSync, ...config.syncConfig };
+          saveSyncConfig(newSync);
+        }
+        
+        return true;
+      }
+    } catch (e) {
+      console.error("Failed to load global config", e);
+    }
+    return false;
+  };
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
@@ -127,7 +186,12 @@ export default function App() {
     }
   }, []);
 
-  const handleLogin = (name: string, dob: string) => {
+  const handleLogin = async (name: string, dob: string) => {
+    // Attempt to load global key on login if missing
+    if (!apiKey) {
+      await loadGlobalConfigData();
+    }
+
     const inputName = name.trim().toLowerCase();
     const inputDob = dob.trim();
     const normalizedInputName = removeAccents(inputName);
@@ -312,8 +376,9 @@ export default function App() {
         learningPath: learningPath
       }));
       setCurrentScreen(ScreenName.LEARNING_PATH);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate path", error);
+      alert("Hệ thống AI đang bận hoặc có lỗi xảy ra. Đã thiết lập lộ trình cơ bản cho bạn. Bạn có thể thử lại sau!");
       setCurrentScreen(ScreenName.LEARNING_PATH);
     } finally {
       setIsGenerating(false);
@@ -452,8 +517,34 @@ export default function App() {
       case ScreenName.LEARNING_PATH:
         return <LearningPathScreen
           user={user}
-          onStartQuiz={(unit) => {
-            setActiveUnit(unit);
+          onStartQuiz={async (unit) => {
+            if (!unit.questions || unit.questions.length === 0) {
+              setIsGenerating(true);
+              try {
+                const questions = await generateUnitQuestions(user, unit);
+                if (questions && questions.length > 0) {
+                  // Update user unit with questions
+                  const updatedPath = user.learningPath?.map(u => 
+                    u.id === unit.id ? { ...u, questions } : u
+                  ) || [];
+                  
+                  setUser(prev => ({ ...prev, learningPath: updatedPath }));
+                  setActiveUnit({ ...unit, questions });
+                } else {
+                  alert("Không thể tải câu hỏi. Vui lòng thử lại!");
+                  return;
+                }
+              } catch (error) {
+                console.error("Lazy load questions error", error);
+                alert("Lỗi khi chuẩn bị bài học. Vui lòng kiểm tra kết nối!");
+                return;
+              } finally {
+                setIsGenerating(false);
+              }
+            } else {
+              setActiveUnit(unit);
+            }
+            
             setIsReviewingQuiz(false);
             setLastQuizResult(null);
             setCurrentScreen(ScreenName.QUIZ);

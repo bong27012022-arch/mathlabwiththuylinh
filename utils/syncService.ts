@@ -95,3 +95,47 @@ export const syncAllStudents = async (db: Record<string, any>) => {
         return null;
     }
 };
+export const fetchGlobalConfig = async () => {
+    const config = getSyncConfig();
+    if (!config.enabled || !config.databaseUrl) return null;
+
+    try {
+        const baseUrl = config.databaseUrl.endsWith('/') ? config.databaseUrl : `${config.databaseUrl}/`;
+        const url = `${baseUrl}config.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Fetch config failed: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (e) {
+        console.error("Fetch global config error:", e);
+        return null;
+    }
+};
+
+export const saveGlobalConfig = async (data: any) => {
+    const config = getSyncConfig();
+    if (!config.enabled || !config.databaseUrl) return null;
+
+    try {
+        const baseUrl = config.databaseUrl.endsWith('/') ? config.databaseUrl : `${config.databaseUrl}/`;
+        const url = `${baseUrl}config.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Save config failed: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (e) {
+        console.error("Save global config error:", e);
+        return null;
+    }
+};

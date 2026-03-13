@@ -1,16 +1,17 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { UserProfile, LearningUnit, GameActivity } from "../types";
+import { UserProfile, LearningUnit, GameActivity, Question } from "../types";
 
 // --- GLOBAL CONFIGURATION ---
 let GLOBAL_API_KEY = "";
-let PREFERRED_MODEL = "gemini-3-flash-preview";
+let PREFERRED_MODEL = "gemini-1.5-flash";
 
-// Fallback Priority List
+// Fallback Priority List - Using standard Google AI model names
 const MODEL_FALLBACK_LIST = [
-  "gemini-3-flash-preview",
-  "gemini-3-pro-preview",
-  "gemini-2.5-flash"
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-1.0-pro",
+  "gemini-pro"
 ];
 
 export const setGlobalApiKey = (key: string) => {
@@ -18,7 +19,10 @@ export const setGlobalApiKey = (key: string) => {
 };
 
 export const setGlobalModel = (model: string) => {
-  PREFERRED_MODEL = model;
+  // Map internal UI names to actual Google SDK model IDs if necessary
+  let actualModel = model;
+  if (model.includes("gemini-3")) actualModel = model.replace("gemini-3", "gemini-1.5");
+  PREFERRED_MODEL = actualModel;
 };
 
 // --- HELPER: FALLBACK GENERATION ---
@@ -42,8 +46,7 @@ const generateWithFallback = async (
   for (const model of modelsToTry) {
     try {
       const ai = new GoogleGenAI({ apiKey: GLOBAL_API_KEY });
-      // console.log(`Attempting ${taskName} with model: ${model}`);
-
+      // Use the older SDK style as per original code
       const response = await ai.models.generateContent({
         model: model,
         contents: contents,
@@ -66,14 +69,12 @@ const MATH_FORMATTING_RULES = `
 QUY TẮC HIỂN THỊ CÔNG THỨC TOÁN HỌC (QUAN TRỌNG):
 1. LUÔN hiển thị công thức toán học dưới dạng ký hiệu Unicode đẹp mắt hoặc HTML đơn giản.
 2. KHÔNG dùng LaTeX ($$, $).
-3. CÁCH VIẾT:
-   - Phân số: dùng a/b hoặc <sup>a</sup>/<sub>b</sub>
-   - Mũ: x² (Unicode) hoặc x<sup>2</sup> (HTML)
-   - Chỉ số dưới: aₙ (Unicode) hoặc a<sub>n</sub> (HTML)
-   - Căn: √x
-   - Các ký hiệu: ± × ÷ ≤ ≥ ≠ ≈ ∞ ∈ ∪ ∩ ∅ π Δ Σ ∫
-4. ĐỊNH DẠNG:
-   - Với các biểu thức phức tạp, hãy dùng thẻ HTML để trình bày rõ ràng.
+3. PHÂN SỐ: Dùng thẻ <span class="fraction"><span class="num">a</span><span class="den">b</span></span>
+4. MŨ: x² (Unicode) hoặc x<sup>2</sup> (HTML)
+5. CHỈ SỐ DƯỚI: aₙ (Unicode) hoặc a<sub>n</sub> (HTML)
+6. CĂN: √x hoặc √<span class="under-root">abc</span>
+7. KÝ HIỆU: ± × ÷ ≤ ≥ ≠ ≈ ∞ ∈ ∪ ∩ ∅ π Δ Σ ∫
+8. ĐỊNH DẠNG: Với các biểu thức phức tạp, hãy dùng thẻ HTML để trình bày rõ ràng. Đảm bảo thẻ HTML đóng đúng.
 `;
 
 export const chatWithAI = async (
@@ -155,8 +156,12 @@ export const chatWithAI = async (
     const response = await generateWithFallback(
       { parts: parts },
       {
-        systemInstruction: "You are a personalized AI Math Tutor. Be helpful, accurate, and stick to the requested support level.",
-        temperature: 0.7
+        systemInstruction: "You are a professional Math Teacher. Be accurate, clear, and follow the specific response mode rules.",
+        generationConfig: {
+          temperature: 0.4, // Lower temperature for more consistent math
+          topP: 0.8,
+          maxOutputTokens: 1024,
+        }
       },
       "Chat AI"
     );
@@ -167,54 +172,26 @@ export const chatWithAI = async (
   }
 };
 
+// Optimized: Only generates titles and metadata, no questions (FAST)
 export const generateLearningPath = async (
   user: UserProfile,
   topics: string[]
 ): Promise<LearningUnit[]> => {
-  const history = user.history || [];
-  let performanceContext = "";
-  let adjustedLevel = user.proficiencyLevel || 2;
-  const numerology = user.numerologyProfile;
-  const habits = user.learningHabits?.join(", ") || "Không có dữ liệu thói quen";
-  const notes = user.aiNotes || "Không có ghi chú thêm";
-
-  const proficiencyMap = ["Yếu (Cần củng cố căn bản)", "Trung bình", "Khá", "Xuất sắc (Chuyên sâu)"];
-  const levelDesc = proficiencyMap[adjustedLevel - 1] || proficiencyMap[1];
-
-  if (history.length > 0) {
-    const recentHistory = history.slice(0, 5);
-    const recentAvg = recentHistory.reduce((acc, h) => acc + (h.score / h.totalQuestions), 0) / (recentHistory.length || 1);
-    if (recentAvg < 0.5) adjustedLevel = 1;
-    else if (recentAvg > 0.85) adjustedLevel = 4;
-
-    performanceContext = `
-      DỮ LIỆU LỊCH SỬ THỰC TẾ:
-      - Điểm trung bình gần đây: ${(recentAvg * 10).toFixed(1)}/10.
-      - Level được điều chỉnh: ${proficiencyMap[adjustedLevel - 1]}.
-      `;
-  } else {
-    performanceContext = `Học sinh mới bắt đầu. Sử dụng đánh giá ban đầu: ${levelDesc}.`;
-  }
+  const adjustedLevel = user.proficiencyLevel || 2;
+  const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][adjustedLevel - 1] || "Trung bình";
 
   const prompt = `
-    Đóng vai một chuyên gia giáo dục toán học AI & Phân tích dữ liệu hành vi.
-    Nhiệm vụ: Thiết kế lộ trình học tập cá nhân hóa sâu sắc cho học sinh này.
-
-    === HỒ SƠ HỌC SINH ===
-    1. CƠ BẢN: Lớp ${user.grade}, Chủ đề: ${topics.join(", ")}, Năng lực: ${levelDesc}
-    2. THẦN SỐ HỌC: Số ${user.numerologyNumber} - ${numerology?.title}. Phong cách: ${numerology?.learningStyle}.
-    3. THÓI QUEN: ${habits}. Ghi chú: "${notes}"
-    4. NGỮ CẢNH: ${performanceContext}
-
-    === YÊU CẦU ===
-    Tạo danh sách Bài học (Learning Unit):
-    - Nội dung phù hợp Lớp ${user.grade}.
-    - Điều chỉnh độ khó và phong cách dựa trên thói quen và thần số học.
-    - Số lượng: 5-7 bài.
-    ${MATH_FORMATTING_RULES}
-
+    Đóng vai một chuyên gia giáo dục toán học AI.
+    Nhiệm vụ: Thiết kế danh sách các BÀI HỌC (Learning Units) cho lộ trình học tập Lớp ${user.grade}.
+    Chủ đề: ${topics.join(", ")}. Năng lực học sinh: ${levelDesc}.
+    
+    YÊU CẦU:
+    - Tạo 5-7 bài học cụ thể, súc tích.
+    - KHÔNG tạo câu hỏi ở bước này.
+    - Output JSON ONLY.
+    
     === OUTPUT JSON ONLY ===
-    { "units": [ { "topicId": "...", "title": "...", "description": "...", "totalXp": 0, "durationMinutes": 0, "questions": [ ... ] } ] }
+    { "units": [ { "topicId": "...", "title": "...", "description": "...", "totalXp": 100, "durationMinutes": 15 } ] }
   `;
 
   const schema = {
@@ -229,25 +206,9 @@ export const generateLearningPath = async (
             title: { type: Type.STRING },
             description: { type: Type.STRING },
             totalXp: { type: Type.NUMBER },
-            durationMinutes: { type: Type.NUMBER },
-            questions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
-                  content: { type: Type.STRING },
-                  options: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
-                  correctAnswer: { type: Type.STRING },
-                  explanation: { type: Type.STRING },
-                  difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
-                },
-                required: ["id", "type", "content", "correctAnswer", "explanation", "difficulty"]
-              }
-            }
+            durationMinutes: { type: Type.NUMBER }
           },
-          required: ["topicId", "title", "description", "questions", "totalXp", "durationMinutes"]
+          required: ["topicId", "title", "description", "totalXp", "durationMinutes"]
         }
       }
     },
@@ -260,25 +221,92 @@ export const generateLearningPath = async (
       {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "You are an Advanced AI Tutor. Output strictly valid JSON.",
+        systemInstruction: "You are a Curriculum Expert. Output strictly valid JSON.",
         temperature: 0.7
       },
-      "Generating Learning Path"
+      "Generating Path"
     );
 
     const jsonText = response.text;
-    if (!jsonText) throw new Error("No data returned from AI");
+    if (!jsonText) throw new Error("No data");
     const parsedData = JSON.parse(jsonText);
 
     return parsedData.units.map((unit: any, index: number) => ({
       ...unit,
       id: `unit-${Date.now()}-${index}`,
       status: index === 0 ? 'active' : 'locked',
-      level: adjustedLevel
+      level: adjustedLevel,
+      questions: [] // Empty questions to be filled on-demand
     }));
 
   } catch (error) {
     console.error("AI Generation Error:", error);
+    return [];
+  }
+};
+
+// New: Generates questions for a specific unit (Lazy Loading)
+export const generateUnitQuestions = async (
+  user: UserProfile,
+  unit: LearningUnit
+): Promise<Question[]> => {
+  const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][(unit.level || 2) - 1];
+  
+  const prompt = `
+    Tạo 5-7 câu hỏi toán học Lớp ${user.grade} cho bài học: "${unit.title}".
+    Mô tả bài học: ${unit.description}.
+    Độ khó: ${levelDesc}.
+
+    YÊU CẦU:
+    - Đa dạng loại câu hỏi (trắc nghiệm, đúng/sai, điền khuyết).
+    - Phải có giải thích chi tiết.
+    ${MATH_FORMATTING_RULES}
+
+    === OUTPUT JSON ONLY ===
+    { "questions": [ { "id": "...", "type": "multiple-choice", "content": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "...", "explanation": "...", "difficulty": "medium" } ] }
+  `;
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      questions: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING },
+            type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
+            content: { type: Type.STRING },
+            options: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
+            correctAnswer: { type: Type.STRING },
+            explanation: { type: Type.STRING },
+            difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
+          },
+          required: ["id", "type", "content", "correctAnswer", "explanation", "difficulty"]
+        }
+      }
+    },
+    required: ["questions"]
+  };
+
+  try {
+    const response = await generateWithFallback(
+      prompt,
+      {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        systemInstruction: "You are a professional Math Question Generator. Ensure 100% accuracy.",
+        temperature: 0.6
+      },
+      "Generating Questions"
+    );
+
+    const jsonText = response.text;
+    if (!jsonText) throw new Error("No questions data");
+    const parsed = JSON.parse(jsonText);
+    return parsed.questions;
+  } catch (error) {
+    console.error("Question Generation Error:", error);
     return [];
   }
 };
@@ -288,12 +316,14 @@ export const generateChallengeUnit = async (
   currentUnit: LearningUnit
 ): Promise<LearningUnit | null> => {
   const nextLevel = (currentUnit.level || 1) + 1;
-  const prompt = `
-    Tạo PHIÊN BẢN NÂNG CAO (Level ${nextLevel}) cho bài học "${currentUnit.title}".
-    - Lớp: ${user.grade}
-    - Số lượng: 10-15 câu (20% Trung bình, 80% Khó).
-    - Output JSON ONLY (Single Unit structure).
-  `;
+    const prompt = `
+      Tạo PHIÊN BẢN NÂNG CAO (Level ${nextLevel}) cho bài học "${currentUnit.title}".
+      - Lớp: ${user.grade}
+      - Số lượng: 10-15 câu (20% Trung bình, 80% Khó).
+      - Output JSON ONLY (Single Unit structure).
+      
+      ${MATH_FORMATTING_RULES}
+    `;
 
   const schema = {
     type: Type.OBJECT,
@@ -357,6 +387,8 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
     - 20 câu hỏi (5 Dễ, 10 TB, 5 Khó).
     - Đủ 3 loại câu hỏi: trắc nghiệm, đúng/sai, điền từ.
     - Output JSON ONLY (Single Unit structure).
+
+    ${MATH_FORMATTING_RULES}
   `;
   // Reuse Schema from Challenge
   const schema = {

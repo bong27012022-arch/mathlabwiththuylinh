@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { UserProfile } from '../../types';
-import { fetchAllStudents, syncAllStudents } from '../../utils/syncService';
-import { Users, LogIn, TrendingUp, Calendar, Search, ChevronDown, ChevronUp, BookOpen, GraduationCap, RefreshCcw, Upload } from 'lucide-react';
+import { fetchAllStudents, syncAllStudents, getSyncConfig } from '../../utils/syncService';
+import { Users, LogIn, TrendingUp, Calendar, Search, ChevronDown, ChevronUp, BookOpen, GraduationCap, RefreshCcw, Upload, AlertCircle } from 'lucide-react';
 
 const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 
@@ -24,11 +24,17 @@ function getClassColor(grade: number) {
 
 export function AdminStatisticsScreen() {
     const [students, setStudents] = useState<UserProfile[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [totalLogins, setTotalLogins] = useState(0);
+    const [totalQuizzes, setTotalQuizzes] = useState(0);
+    const [allGrades, setAllGrades] = useState<number[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [openClasses, setOpenClasses] = useState<Set<number>>(new Set());
     const [filterGrade, setFilterGrade] = useState<number | null>(null);
+    const [showAdmins, setShowAdmins] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     useEffect(() => {
         loadStudents();
@@ -36,13 +42,16 @@ export function AdminStatisticsScreen() {
 
     const loadStudents = async () => {
         setIsRefreshing(true);
+        setSyncError(null);
         try {
             // 1. Load Local DB
             const rawDb = localStorage.getItem(STUDENT_DB_KEY);
             let mergedDb: Record<string, UserProfile> = rawDb ? JSON.parse(rawDb) : {};
+            console.log("Local DB Load:", Object.keys(mergedDb).length, "records");
 
             // 2. Load Cloud DB
             const cloudDb = await fetchAllStudents();
+            console.log("Cloud DB Fetch:", cloudDb ? Object.keys(cloudDb).length : "FAILED", "records");
             if (cloudDb) {
                 // Smart Merge: Gộp mảng history và loginDates thay vì ghi đè
                 Object.keys(cloudDb).forEach(id => {
@@ -70,24 +79,33 @@ export function AdminStatisticsScreen() {
                         // Cập nhật các thông tin khác (Lấy cái mới nhất)
                         local.grade = cloud.grade || local.grade;
                         local.proficiencyLevel = cloud.proficiencyLevel || local.proficiencyLevel;
+                        local.isAdmin = cloud.isAdmin || local.isAdmin; // Keep admin status consistent
                     } else {
                         mergedDb[id] = cloudDb[id];
                     }
                 });
+            } else {
+                setSyncError("Không thể tải dữ liệu từ Cloud. Vui lòng kiểm tra cấu hình Firebase URL hoặc Internet.");
             }
 
-            const studentList = Object.values(mergedDb).filter(user => !user.isAdmin);
-            studentList.sort((a, b) => (b.loginDates?.length || 0) - (a.loginDates?.length || 0));
+            const allUsersList = Object.values(mergedDb);
+            const studentList = allUsersList.filter(user => showAdmins || !user.isAdmin);
+            
+            console.log("Database Stats:", allUsersList.length, "total users");
+            console.log("Displaying:", studentList.length, "users (showAdmins:", showAdmins, ")");
+            
             setStudents(studentList);
             
-            // Open all classes by default
-            if (openClasses.size === 0) {
-                const grades = new Set(studentList.map(s => s.grade));
-                setOpenClasses(grades);
-            }
+            // Stats from ALL users for the top boxes
+            const grades = Array.from(new Set(allUsersList.map(s => s.grade))).sort((a, b) => a - b);
+            setAllGrades(grades as any);
+            setTotalLogins(allUsersList.reduce((acc, s) => acc + (s.loginDates?.length || 0), 0));
+            setTotalQuizzes(allUsersList.reduce((acc, s) => acc + (s.history?.length || 0), 0));
+            setTotalUsers(allUsersList.length);
             setLastUpdated(new Date());
         } catch (e) {
             console.error("Error loading student data", e);
+            setSyncError("Lỗi hệ thống khi tải dữ liệu: " + e);
         } finally {
             setIsRefreshing(false);
         }
@@ -114,38 +132,33 @@ export function AdminStatisticsScreen() {
         }
     };
 
-    // Nhóm học sinh theo lớp
-    const groupedByClass = useMemo(() => {
-        const filtered = students.filter(student =>
-            student.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+    // 1. Filter by Search and Admin toggle
+    const studentsAfterBaseFilter = useMemo(() => {
+        return students.filter(student => {
+            const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesSearch;
+        });
+    }, [students, searchTerm]);
 
+    // 2. Further filter by Grade for display
+    const filteredStudents = useMemo(() => {
+        if (filterGrade === null) return studentsAfterBaseFilter;
+        return studentsAfterBaseFilter.filter(s => s.grade === filterGrade);
+    }, [studentsAfterBaseFilter, filterGrade]);
+
+    // 3. Group for display
+    const displayedClasses = useMemo(() => {
         const grouped: Record<number, UserProfile[]> = {};
-        filtered.forEach(student => {
+        filteredStudents.forEach(student => {
             const grade = student.grade || 0;
             if (!grouped[grade]) grouped[grade] = [];
             grouped[grade].push(student);
         });
 
-        // Sắp xếp theo lớp tăng dần
-        const sorted = Object.entries(grouped)
+        return Object.entries(grouped)
             .map(([grade, students]) => ({ grade: Number(grade), students }))
             .sort((a, b) => a.grade - b.grade);
-
-        return sorted;
-    }, [students, searchQuery]);
-
-    // Lọc theo lớp nếu có
-    const displayedClasses = useMemo(() => {
-        if (filterGrade === null) return groupedByClass;
-        return groupedByClass.filter(g => g.grade === filterGrade);
-    }, [groupedByClass, filterGrade]);
-
-    // Danh sách tất cả các lớp (để hiển thị filter chip)
-    const allGrades = useMemo(() => {
-        const grades = [...new Set(students.map(s => s.grade))].sort((a, b) => a - b);
-        return grades;
-    }, [students]);
+    }, [filteredStudents]);
 
     const toggleClass = (grade: number) => {
         setOpenClasses(prev => {
@@ -181,67 +194,110 @@ export function AdminStatisticsScreen() {
 
     return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                        <TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-indigo-600" />
-                        Thống kê theo Lớp
-                    </h1>
-                    <p className="text-gray-500 mt-2 text-sm md:text-base">Theo dõi hoạt động của học sinh từ tất cả thiết bị (Cloud Sync)</p>
+            {/* Header & Controls */}
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                                <TrendingUp className="w-6 h-6 md:w-8 md:h-8" />
+                            </div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                                Thống kê theo Lớp
+                            </h1>
+                        </div>
+                        <p className="text-gray-500 text-sm md:text-base">Theo dõi hoạt động của học sinh từ Cloud Sync</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 lg:justify-end">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-2 mb-1">
+                                {lastUpdated && (
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                        Cập nhật: {lastUpdated.toLocaleTimeString('vi-VN')}
+                                    </span>
+                                )}
+                                <button 
+                                    onClick={loadStudents}
+                                    disabled={isRefreshing}
+                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                                        isRefreshing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200'
+                                    }`}
+                                >
+                                    <RefreshCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    {isRefreshing ? 'Đang tải...' : 'Làm mới dữ liệu'}
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] px-2 py-1 bg-gray-50 rounded-md text-gray-500 font-mono border border-gray-100 max-w-[250px] truncate">
+                                    DB: {getSyncConfig().databaseUrl}
+                                </span>
+                                <button 
+                                    onClick={handlePushToCloud}
+                                    disabled={isRefreshing}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border shadow-sm ${
+                                        isRefreshing ? 'border-gray-100 text-gray-300' : 'border-indigo-100 text-indigo-600 hover:bg-indigo-50'
+                                    }`}
+                                >
+                                    <Upload className="w-3 h-3" />
+                                    Đẩy local lên Cloud
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3 self-start md:self-auto">
-                    {lastUpdated && (
-                        <span className="text-[10px] text-gray-400 font-medium">
-                            Cập nhật: {lastUpdated.toLocaleTimeString('vi-VN')}
+
+                {/* Sync Diagnostics */}
+                <div className="mt-6 pt-6 border-t border-gray-50 flex flex-wrap items-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2.5 h-2.5 rounded-full ${syncError ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+                        <span className="text-xs font-bold text-gray-700">Trạng thái kết nối Cloud:</span>
+                        <span className={`text-xs font-medium ${syncError ? 'text-red-500' : 'text-green-600'}`}>
+                            {syncError ? 'LỖI KẾT NỐI' : 'ĐÃ KẾT NỐI'}
                         </span>
+                    </div>
+
+                    {syncError && (
+                        <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {syncError}
+                        </div>
                     )}
-                    <button 
-                        onClick={loadStudents}
-                        disabled={isRefreshing}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                            isRefreshing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                        }`}
-                    >
-                        <RefreshCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {isRefreshing ? 'Đang tải...' : 'Làm mới'}
-                    </button>
-                    <button 
-                        onClick={handlePushToCloud}
-                        disabled={isRefreshing}
-                        title="Đẩy dữ liệu từ máy này lên Cloud"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
-                            isRefreshing ? 'border-gray-100 text-gray-300' : 'border-indigo-100 text-indigo-400 hover:bg-indigo-50'
-                        }`}
-                    >
-                        <Upload className="w-4 h-4" />
-                        Đẩy dữ liệu lên Cloud
-                    </button>
                 </div>
             </div>
 
             {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-                <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
+                {/* Total Users */}
+                <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 relative">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                         <Users className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div>
-                        <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">Tổng HS</p>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">{students.length}</p>
+                        <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">Tổng HS</p>
+                            {!showAdmins && totalUsers > students.length && (
+                                <span className="text-[8px] bg-amber-50 text-amber-600 px-1 rounded" title="Admin đã bị ẩn">
+                                    +Admin
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">{totalUsers}</p>
                     </div>
                 </div>
+
+                {/* Total Logins */}
                 <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shrink-0">
                         <LogIn className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">Lượt truy cập</p>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">
-                            {students.reduce((acc, student) => acc + (student.loginDates?.length || 0), 0)}
-                        </p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">{totalLogins}</p>
                     </div>
                 </div>
+
+                {/* Total Classes */}
                 <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 shrink-0">
                         <GraduationCap className="w-5 h-5 md:w-6 md:h-6" />
@@ -251,30 +307,45 @@ export function AdminStatisticsScreen() {
                         <p className="text-xl md:text-2xl font-bold text-gray-900">{allGrades.length}</p>
                     </div>
                 </div>
+
+                {/* Total Quizzes */}
                 <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
                         <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">Tổng bài làm</p>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">
-                            {students.reduce((acc, s) => acc + (s.history?.length || 0), 0)}
-                        </p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">{totalQuizzes}</p>
                     </div>
                 </div>
             </div>
 
             {/* Search and Filter */}
             <div className="mb-6 flex flex-col md:flex-row gap-3 md:gap-4">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm theo tên học sinh..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm"
-                    />
+                <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                            type="text"
+                            placeholder="Tìm kiếm tên học sinh..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
+                        <input 
+                            type="checkbox" 
+                            id="show-admins"
+                            checked={showAdmins}
+                            onChange={(e) => {
+                                setShowAdmins(e.target.checked);
+                                loadStudents(); // Reload to apply filter
+                            }}
+                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                        />
+                        <label htmlFor="show-admins" className="text-xs text-gray-500 cursor-pointer select-none">Hiện Admin</label>
+                    </div>
                 </div>
                 {/* Filter Chips */}
                 <div className="flex flex-wrap gap-2 items-center">
@@ -436,12 +507,23 @@ export function AdminStatisticsScreen() {
                         );
                     })
                 ) : (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Search className="w-7 h-7 text-gray-300" />
+                    <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="w-8 h-8 text-gray-300" />
                         </div>
-                        <p className="text-gray-400 font-medium">Không tìm thấy học sinh nào phù hợp</p>
-                        <p className="text-gray-300 text-sm mt-1">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc lớp</p>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Chưa có dữ liệu thống kê</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto text-sm mb-6">
+                            Có thể do bạn đang lọc ẩn Admin, sai địa chỉ Database hoặc chưa có học sinh nào tham gia.
+                        </p>
+                        <div className="flex flex-col gap-2 max-w-xs mx-auto text-left bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <p className="text-[11px] font-bold text-indigo-700 uppercase">Gợi ý kiểm tra:</p>
+                            <ul className="text-[11px] text-indigo-600 list-disc pl-4 space-y-1">
+                                <li>Tích vào ô <b>"Hiện Admin"</b> phía trên.</li>
+                                <li>Kiểm tra <b>"Trạng thái kết nối"</b> (phải là ĐÃ KẾT NỐI).</li>
+                                <li>Kiểm tra <b>Database URL</b> có đúng Firebase của bạn không.</li>
+                                <li>Nhấn <b>"Làm mới"</b> để tải lại từ Cloud.</li>
+                            </ul>
+                        </div>
                     </div>
                 )}
             </div>
