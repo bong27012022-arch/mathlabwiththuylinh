@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit, Brain, UserCog, ChevronRight, Bell, Globe, Shield, Info, FileText, LogOut, X, School, CheckCircle, Trophy, Key, Clock, Crown } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { ApiKeyModal } from '../ApiKeyModal';
+import { getSyncConfig, saveSyncConfig, SyncConfig } from '../../utils/syncService';
 
 interface Props {
     user: UserProfile;
@@ -9,12 +10,13 @@ interface Props {
     onBack: () => void;
 }
 
-type ModalType = 'notifications' | 'about' | null;
+type ModalType = 'notifications' | 'about' | 'sync' | null;
 
 export const SettingsScreen: React.FC<Props> = ({ user, onLogout, onBack }) => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [showKeyModal, setShowKeyModal] = useState(false);
     const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
+    const [syncConfig, setSyncConfig] = useState<SyncConfig>(getSyncConfig());
 
     // Countdown Logic
     useEffect(() => {
@@ -201,6 +203,20 @@ export const SettingsScreen: React.FC<Props> = ({ user, onLogout, onBack }) => {
                             </div>
                             <ChevronRight className="text-gray-400 w-5 h-5" />
                         </button>
+
+                        <button
+                            onClick={() => setActiveModal('sync')}
+                            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left group"
+                        >
+                            <div className="flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 shrink-0 size-10">
+                                <Globe className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 truncate">
+                                <p className="text-[15px] font-medium">Đồng bộ Cloud (Firebase)</p>
+                                <p className="text-gray-500 dark:text-gray-400 text-xs">Phục vụ thống kê đa thiết bị</p>
+                            </div>
+                            <ChevronRight className="text-gray-400 w-5 h-5" />
+                        </button>
                     </div>
                 </section>
 
@@ -258,7 +274,8 @@ export const SettingsScreen: React.FC<Props> = ({ user, onLogout, onBack }) => {
                     <div className="bg-white dark:bg-surface-dark w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-slide-up relative">
                         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
                             <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-                                {activeModal === 'notifications' ? 'Thông báo' : 'Về ứng dụng'}
+                                {activeModal === 'notifications' ? 'Thông báo' : 
+                                 activeModal === 'sync' ? 'Đồng bộ Cloud' : 'Về ứng dụng'}
                             </h3>
                             <button
                                 onClick={() => setActiveModal(null)}
@@ -269,6 +286,58 @@ export const SettingsScreen: React.FC<Props> = ({ user, onLogout, onBack }) => {
                         </div>
 
                         <div className="p-5 overflow-y-auto">
+                            {activeModal === 'sync' && (
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                                        <div className="flex items-center gap-2">
+                                            <Globe className="w-5 h-5 text-blue-600" />
+                                            <span className="font-bold text-sm">Bật đồng bộ</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer" 
+                                                checked={syncConfig.enabled}
+                                                onChange={(e) => setSyncConfig({...syncConfig, enabled: e.target.checked})}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 italic">Bật tính năng này để gửi dữ liệu của học sinh lên một cơ sở dữ liệu chung (Firebase REST API), giúp giáo viên có thể xem thống kê từ xa.</p>
+                                    
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Firebase Database URL</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="https://your-project.firebaseio.com/"
+                                            value={syncConfig.databaseUrl}
+                                            onChange={(e) => setSyncConfig({...syncConfig, databaseUrl: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-[11px]"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Secret Key (Nếu có)</label>
+                                        <input 
+                                            type="password" 
+                                            placeholder="Database secret or auth token"
+                                            value={syncConfig.secretKey || ''}
+                                            onChange={(e) => setSyncConfig({...syncConfig, secretKey: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        />
+                                    </div>
+
+                                    <button 
+                                        onClick={() => {
+                                            saveSyncConfig(syncConfig);
+                                            setActiveModal(null);
+                                        }}
+                                        className="mt-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all"
+                                    >
+                                        Lưu cấu hình
+                                    </button>
+                                </div>
+                            )}
                             {activeModal === 'notifications' && renderNotifications()}
                             {activeModal === 'about' && (
                                 <div className="flex flex-col items-center text-center">

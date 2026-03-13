@@ -23,6 +23,7 @@ import { analyzeProfile } from './utils/numerology';
 import { calculateGradeLevelFromBirthDate } from './utils/gradeCalculator';
 import { generateLearningPath, generateChallengeUnit, generateComprehensiveTest, setGlobalApiKey, setGlobalModel } from './utils/aiGenerator';
 import { getStudentDbId, removeAccents } from './utils/userUtils';
+import { syncStudentData } from './utils/syncService';
 import { Loader2 } from 'lucide-react';
 import { STUDENT_ACCOUNTS } from './data/studentAccounts';
 
@@ -100,6 +101,9 @@ export default function App() {
         // Update the DB record with current user state
         db[dbId] = user;
         localStorage.setItem(STUDENT_DB_KEY, JSON.stringify(db));
+        
+        // Push to Cloud Sync if enabled
+        syncStudentData(dbId, user);
       } catch (e) {
         console.error("Error saving to DB", e);
       }

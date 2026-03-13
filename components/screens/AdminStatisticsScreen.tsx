@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { UserProfile } from '../../types';
-import { Users, LogIn, TrendingUp, Calendar, Search, ChevronDown, ChevronUp, BookOpen, GraduationCap } from 'lucide-react';
+import { fetchAllStudents, syncAllStudents } from '../../utils/syncService';
+import { Users, LogIn, TrendingUp, Calendar, Search, ChevronDown, ChevronUp, BookOpen, GraduationCap, RefreshCcw, Upload } from 'lucide-react';
 
 const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 
@@ -26,25 +27,62 @@ export function AdminStatisticsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [openClasses, setOpenClasses] = useState<Set<number>>(new Set());
     const [filterGrade, setFilterGrade] = useState<number | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     useEffect(() => {
         loadStudents();
     }, []);
 
-    const loadStudents = () => {
+    const loadStudents = async () => {
+        setIsRefreshing(true);
         try {
+            // 1. Load Local DB
             const rawDb = localStorage.getItem(STUDENT_DB_KEY);
-            if (rawDb) {
-                const db: Record<string, UserProfile> = JSON.parse(rawDb);
-                const studentList = Object.values(db).filter(user => !user.isAdmin);
-                studentList.sort((a, b) => (b.loginDates?.length || 0) - (a.loginDates?.length || 0));
-                setStudents(studentList);
-                // Mở tất cả các lớp theo mặc định
+            let mergedDb: Record<string, UserProfile> = rawDb ? JSON.parse(rawDb) : {};
+
+            // 2. Load Cloud DB
+            const cloudDb = await fetchAllStudents();
+            if (cloudDb) {
+                // Merge Cloud into Local (simplified: Cloud wins for shared keys)
+                mergedDb = { ...mergedDb, ...cloudDb };
+            }
+
+            const studentList = Object.values(mergedDb).filter(user => !user.isAdmin);
+            studentList.sort((a, b) => (b.loginDates?.length || 0) - (a.loginDates?.length || 0));
+            setStudents(studentList);
+            
+            // Open all classes by default
+            if (openClasses.size === 0) {
                 const grades = new Set(studentList.map(s => s.grade));
                 setOpenClasses(grades);
             }
+            setLastUpdated(new Date());
         } catch (e) {
             console.error("Error loading student data", e);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const handlePushToCloud = async () => {
+        const confirmResult = window.confirm("Bạn có muốn đẩy toàn bộ dữ liệu từ máy này lên Cloud không? Việc này giúp đồng bộ số liệu nếu bạn vừa chuyển từ máy khác sang.");
+        if (!confirmResult) return;
+
+        setIsRefreshing(true);
+        try {
+            const rawDb = localStorage.getItem(STUDENT_DB_KEY);
+            if (rawDb) {
+                const db = JSON.parse(rawDb);
+                await syncAllStudents(db);
+                alert("Đã đồng bộ dữ liệu lên Cloud thành công!");
+                loadStudents(); // Reload total
+            }
+        } catch (e) {
+            console.error("Error pushing to cloud", e);
+            alert("Lỗi đồng bộ: " + e);
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -116,12 +154,42 @@ export function AdminStatisticsScreen() {
     return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="mb-6 md:mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    <TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-indigo-600" />
-                    Thống kê theo Lớp
-                </h1>
-                <p className="text-gray-500 mt-2 text-sm md:text-base">Theo dõi hoạt động của học sinh, nhóm theo lớp học</p>
+            <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                        <TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-indigo-600" />
+                        Thống kê theo Lớp
+                    </h1>
+                    <p className="text-gray-500 mt-2 text-sm md:text-base">Theo dõi hoạt động của học sinh từ tất cả thiết bị (Cloud Sync)</p>
+                </div>
+                <div className="flex items-center gap-3 self-start md:self-auto">
+                    {lastUpdated && (
+                        <span className="text-[10px] text-gray-400 font-medium">
+                            Cập nhật: {lastUpdated.toLocaleTimeString('vi-VN')}
+                        </span>
+                    )}
+                    <button 
+                        onClick={loadStudents}
+                        disabled={isRefreshing}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                            isRefreshing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                        }`}
+                    >
+                        <RefreshCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'Đang tải...' : 'Làm mới'}
+                    </button>
+                    <button 
+                        onClick={handlePushToCloud}
+                        disabled={isRefreshing}
+                        title="Đẩy dữ liệu từ máy này lên Cloud"
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                            isRefreshing ? 'border-gray-100 text-gray-300' : 'border-indigo-100 text-indigo-400 hover:bg-indigo-50'
+                        }`}
+                    >
+                        <Upload className="w-4 h-4" />
+                        Đẩy dữ liệu lên Cloud
+                    </button>
+                </div>
             </div>
 
             {/* Stats Overview */}
