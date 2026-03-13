@@ -44,8 +44,36 @@ export function AdminStatisticsScreen() {
             // 2. Load Cloud DB
             const cloudDb = await fetchAllStudents();
             if (cloudDb) {
-                // Merge Cloud into Local (simplified: Cloud wins for shared keys)
-                mergedDb = { ...mergedDb, ...cloudDb };
+                // Smart Merge: Gộp mảng history và loginDates thay vì ghi đè
+                Object.keys(cloudDb).forEach(id => {
+                    if (mergedDb[id]) {
+                        const local = mergedDb[id];
+                        const cloud = cloudDb[id];
+                        
+                        // Gộp loginDates
+                        const combinedLogins = [
+                            ...(local.loginDates || []), 
+                            ...(cloud.loginDates || [])
+                        ];
+                        local.loginDates = Array.from(new Set(combinedLogins)).sort((a, b) => b - a);
+
+                        // Gộp history
+                        const combinedHistory = [
+                            ...(local.history || []),
+                            ...(cloud.history || [])
+                        ];
+                        // De-duplicate history based on timestamp and unitId
+                        local.history = combinedHistory.filter((v, i, a) =>
+                            a.findIndex(t => t.timestamp === v.timestamp && t.unitId === v.unitId) === i
+                        ).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+                        // Cập nhật các thông tin khác (Lấy cái mới nhất)
+                        local.grade = cloud.grade || local.grade;
+                        local.proficiencyLevel = cloud.proficiencyLevel || local.proficiencyLevel;
+                    } else {
+                        mergedDb[id] = cloudDb[id];
+                    }
+                });
             }
 
             const studentList = Object.values(mergedDb).filter(user => !user.isAdmin);
