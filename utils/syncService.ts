@@ -56,16 +56,20 @@ export const fetchAllStudents = async () => {
     if (!config.enabled || !config.databaseUrl) return null;
 
     try {
-        const baseUrl = config.databaseUrl.endsWith('/') ? config.databaseUrl : `${config.databaseUrl}/`;
-        const url = `${baseUrl}students.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        let baseUrl = config.databaseUrl.trim();
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+        
+        const url = `${baseUrl}/students.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
         
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Fetch failed: ${response.statusText}`);
+            console.error(`Fetch failed with status: ${response.status} ${response.statusText}`);
+            return null;
         }
         return await response.json();
     } catch (e) {
-        console.error("Fetch students error:", e);
+        console.error("Fetch students network error:", e);
         return null;
     }
 };
@@ -75,8 +79,11 @@ export const syncAllStudents = async (db: Record<string, any>) => {
     if (!config.enabled || !config.databaseUrl) return null;
 
     try {
-        const baseUrl = config.databaseUrl.endsWith('/') ? config.databaseUrl : `${config.databaseUrl}/`;
-        const url = `${baseUrl}students.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        let baseUrl = config.databaseUrl.trim();
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+
+        const url = `${baseUrl}/students.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
         
         const response = await fetch(url, {
             method: 'PATCH',
@@ -87,11 +94,12 @@ export const syncAllStudents = async (db: Record<string, any>) => {
         });
 
         if (!response.ok) {
-            throw new Error(`Batch sync failed: ${response.statusText}`);
+            console.error(`Batch sync failed with status: ${response.status}`);
+            return null;
         }
         return await response.json();
     } catch (e) {
-        console.error("Batch sync error:", e);
+        console.error("Batch sync network error:", e);
         return null;
     }
 };
@@ -100,16 +108,20 @@ export const fetchGlobalConfig = async () => {
     if (!config.enabled || !config.databaseUrl) return null;
 
     try {
-        const baseUrl = config.databaseUrl.endsWith('/') ? config.databaseUrl : `${config.databaseUrl}/`;
-        const url = `${baseUrl}config.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        let baseUrl = config.databaseUrl.trim();
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+
+        const url = `${baseUrl}/config.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
         
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Fetch config failed: ${response.statusText}`);
+            console.error(`Fetch config failed with status: ${response.status}`);
+            return null;
         }
         return await response.json();
     } catch (e) {
-        console.error("Fetch global config error:", e);
+        console.error("Fetch global config network error:", e);
         return null;
     }
 };
