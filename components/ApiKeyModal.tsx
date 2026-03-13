@@ -41,7 +41,7 @@ export const ApiKeyModal: React.FC<Props> = ({ isOpen, onSave, onClose, initialK
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary to-teal-600 p-6 text-white">
           <div className="flex items-center gap-3 mb-2">
@@ -54,8 +54,8 @@ export const ApiKeyModal: React.FC<Props> = ({ isOpen, onSave, onClose, initialK
             Ứng dụng cần Gemini API Key của riêng bạn để hoạt động.
           </p>
         </div>
-
-        <div className="p-6 flex flex-col gap-6">
+        
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
           {/* Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
             <div className="flex gap-3">
