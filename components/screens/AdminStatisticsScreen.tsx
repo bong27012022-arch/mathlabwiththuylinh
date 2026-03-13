@@ -89,19 +89,19 @@ export function AdminStatisticsScreen() {
             }
 
             const allUsersList = Object.values(mergedDb);
-            const studentList = allUsersList.filter(user => showAdmins || !user.isAdmin);
+            const validUsersList = allUsersList.filter(s => s && s.name);
+            const studentList = validUsersList.filter(user => showAdmins || !user.isAdmin);
             
-            console.log("Database Stats:", allUsersList.length, "total users");
-            console.log("Displaying:", studentList.length, "users (showAdmins:", showAdmins, ")");
+            console.log("Database Stats:", validUsersList.length, "valid users");
             
             setStudents(studentList);
             
-            // Stats from ALL users for the top boxes
-            const grades = Array.from(new Set(allUsersList.map(s => s.grade))).sort((a, b) => a - b);
-            setAllGrades(grades as any);
-            setTotalLogins(allUsersList.reduce((acc, s) => acc + (s.loginDates?.length || 0), 0));
-            setTotalQuizzes(allUsersList.reduce((acc, s) => acc + (s.history?.length || 0), 0));
-            setTotalUsers(allUsersList.length);
+            // Stats from ALL valid users for the top boxes
+            const grades = Array.from(new Set(validUsersList.map(s => s.grade).filter(g => typeof g === 'number'))).sort((a, b) => a - b);
+            setAllGrades(grades as number[]);
+            setTotalLogins(validUsersList.reduce((acc, s) => acc + (s.loginDates?.length || 0), 0));
+            setTotalQuizzes(validUsersList.reduce((acc, s) => acc + (s.history?.length || 0), 0));
+            setTotalUsers(validUsersList.length);
             setLastUpdated(new Date());
         } catch (e) {
             console.error("Error loading student data", e);
@@ -135,6 +135,7 @@ export function AdminStatisticsScreen() {
     // 1. Filter by Search and Admin toggle
     const studentsAfterBaseFilter = useMemo(() => {
         return students.filter(student => {
+            if (!student || !student.name) return false;
             const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
             return matchesSearch;
         });
@@ -181,7 +182,10 @@ export function AdminStatisticsScreen() {
 
     const calculateProgress = (student: UserProfile) => {
         if (!student.history || student.history.length === 0) return 'Chưa có data';
-        const recentScores = student.history.slice(0, 5).map(h => Math.round((h.score / h.totalQuestions) * 100));
+        const recentScores = student.history.slice(0, 5).map(h => {
+             const total = h.totalQuestions || 1; // Prevent division by zero
+             return Math.round((h.score / total) * 100);
+        });
         const avg = recentScores.reduce((a, b) => a + b, 0) / recentScores.length;
         return `${avg.toFixed(1)}% (TB ${recentScores.length} bài gần nhất)`;
     };
