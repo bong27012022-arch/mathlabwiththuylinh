@@ -14,10 +14,10 @@ export const getSyncConfig = (): SyncConfig => {
     } catch (e) {
         console.error("Failed to load sync config", e);
     }
-    // Mặc định bật sẵn với Server dùng thử cho người dùng
+    // Mặc định dùng Database chính xác của cô Linh
     return { 
         enabled: true, 
-        databaseUrl: 'https://mathlab-linh-default-rtdb.asia-southeast1.firebasedatabase.app/' 
+        databaseUrl: 'https://rung-chuong-vang-sp-default-rtdb.asia-southeast1.firebasedatabase.app/' 
     };
 };
 
