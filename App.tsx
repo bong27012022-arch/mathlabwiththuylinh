@@ -31,7 +31,7 @@ import {
   setGlobalModel
 } from './utils/aiGenerator';
 import { getStudentDbId, removeAccents } from './utils/userUtils';
-import { syncStudentData, fetchGlobalConfig, saveGlobalConfig, getSyncConfig, saveSyncConfig } from './utils/syncService';
+import { syncStudentData, fetchGlobalConfig, saveGlobalConfig, getSyncConfig, saveSyncConfig, incrementGlobalVisits } from './utils/syncService';
 import { Loader2 } from 'lucide-react';
 import { STUDENT_ACCOUNTS } from './data/studentAccounts';
 
@@ -58,6 +58,8 @@ export default function App() {
 
   // Load API Key on Mount
   useEffect(() => {
+    incrementGlobalVisits();
+    
     const storedKey = localStorage.getItem(API_KEY_STORAGE);
     const storedModel = localStorage.getItem(MODEL_STORAGE) || 'gemini-3-flash-preview';
 

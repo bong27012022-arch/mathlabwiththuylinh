@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenName, UserProfile } from '../types';
-import { fetchAllStudents } from '../utils/syncService';
+import { fetchGlobalVisits } from '../utils/syncService';
 
 const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 import { Home, Map, BarChart2, User, Gamepad2, LogOut, Calculator, Key, Settings, Clock, Crown, X, Check, CreditCard, History, TrendingUp } from 'lucide-react';
@@ -21,25 +21,8 @@ export const SidebarNavigation: React.FC<Props> = ({ currentScreen, onNavigate, 
   useEffect(() => {
     const loadVisits = async () => {
       try {
-        const rawDb = localStorage.getItem(STUDENT_DB_KEY);
-        let mergedDb: Record<string, any> = rawDb ? JSON.parse(rawDb) : {};
-        
-        const cloudDb = await fetchAllStudents();
-        if (cloudDb) {
-          Object.keys(cloudDb).forEach(id => {
-            if (mergedDb[id]) {
-              const localLogins = mergedDb[id].loginDates || [];
-              const cloudLogins = cloudDb[id].loginDates || [];
-              const combinedLogins = [...localLogins, ...cloudLogins];
-              mergedDb[id].loginDates = Array.from(new Set(combinedLogins));
-            } else {
-              mergedDb[id] = cloudDb[id];
-            }
-          });
-        }
-        
-        const totalCount = Object.values(mergedDb).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
-        setTotalVisits(totalCount);
+        const count = await fetchGlobalVisits();
+        setTotalVisits(count);
       } catch (e) {
         console.error("Failed to load global visits", e);
       }
