@@ -35,29 +35,37 @@ const generateWithFallback = async (
     throw new Error("Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng AI.");
   }
 
-  // Prioritize selected model, then try others in order
-  const modelsToTry = [
+  // Prioritize selected model, then try at most ONE fallback to avoid long loading times
+  const modelsToTry = Array.from(new Set([
     PREFERRED_MODEL,
-    ...MODEL_FALLBACK_LIST.filter(m => m !== PREFERRED_MODEL)
-  ];
+    "gemini-1.5-flash"
+  ]));
 
   let lastError: any = null;
+  const TIMEOUT_MS = 12000; // 12 seconds per try
 
   for (const model of modelsToTry) {
     try {
       const ai = new GoogleGenAI({ apiKey: GLOBAL_API_KEY });
-      // Use the older SDK style as per original code
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: contents,
-        config: config
-      });
+      
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: model,
+          contents: contents,
+          config: config
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), TIMEOUT_MS))
+      ]) as any;
 
       return response;
     } catch (error: any) {
       console.warn(`${taskName} failed with ${model}. Error:`, error);
       lastError = error;
-      // Continue to next model
+      
+      // If we hit a rate limit (429), don't bother trying other models on the same tier, just fail fast
+      if (error?.status === 429 || error?.message?.includes("429")) {
+        break; 
+      }
     }
   }
 
@@ -241,7 +249,31 @@ export const generateLearningPath = async (
 
   } catch (error) {
     console.error("AI Generation Error:", error);
-    return [];
+    // FALLBACK: Return basic path if AI hits rate limit or fails
+    return [
+      {
+        id: `unit-fallback-${Date.now()}-1`,
+        topicId: "fallback",
+        title: "Ôn tập cơ bản (AI Đang Bận)",
+        description: "Lộ trình tự động do hệ thống AI đang có quá nhiều bạn truy cập cùng lúc.",
+        totalXp: 100,
+        durationMinutes: 15,
+        status: 'active',
+        level: adjustedLevel,
+        questions: []
+      },
+      {
+        id: `unit-fallback-${Date.now()}-2`,
+        topicId: "fallback",
+        title: "Kiến thức trọng tâm (AI Đang Bận)",
+        description: "Các chủ đề mặc định để bạn không bị gián đoạn việc học.",
+        totalXp: 150,
+        durationMinutes: 20,
+        status: 'locked',
+        level: adjustedLevel,
+        questions: []
+      }
+    ];
   }
 };
 
@@ -307,7 +339,27 @@ export const generateUnitQuestions = async (
     return parsed.questions;
   } catch (error) {
     console.error("Question Generation Error:", error);
-    return [];
+    // FALLBACK: Return basic questions if AI fails
+    return [
+      {
+        id: "q_fb_1",
+        type: "multiple-choice",
+        content: `Câu hỏi tự động (Lớp ${user.grade}): Kết quả của phép tính 15 + 27 là bao nhiêu?`,
+        options: ["32", "42", "52", "40"],
+        correctAnswer: "42",
+        explanation: "15 + 27 = 42. (Hệ thống AI đang quá tải, đây là câu hỏi dự phòng)",
+        difficulty: "easy"
+      },
+      {
+        id: "q_fb_2",
+        type: "multiple-choice",
+        content: `Đâu là số chẵn trong các số sau?`,
+        options: ["13", "27", "44", "91"],
+        correctAnswer: "44",
+        explanation: "Số chẵn là số chia hết cho 2. (Hệ thống AI đang quá tải)",
+        difficulty: "easy"
+      }
+    ];
   }
 };
 
