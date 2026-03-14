@@ -22,17 +22,24 @@ export const SidebarNavigation: React.FC<Props> = ({ currentScreen, onNavigate, 
     const loadVisits = async () => {
       try {
         const rawDb = localStorage.getItem(STUDENT_DB_KEY);
-        if (rawDb) {
-          const db = JSON.parse(rawDb);
-          const localCount = Object.values(db).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
-          setTotalVisits(localCount);
-        }
+        let mergedDb: Record<string, any> = rawDb ? JSON.parse(rawDb) : {};
         
         const cloudDb = await fetchAllStudents();
         if (cloudDb) {
-          const cloudCount = Object.values(cloudDb).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
-          setTotalVisits(cloudCount);
+          Object.keys(cloudDb).forEach(id => {
+            if (mergedDb[id]) {
+              const localLogins = mergedDb[id].loginDates || [];
+              const cloudLogins = cloudDb[id].loginDates || [];
+              const combinedLogins = [...localLogins, ...cloudLogins];
+              mergedDb[id].loginDates = Array.from(new Set(combinedLogins));
+            } else {
+              mergedDb[id] = cloudDb[id];
+            }
+          });
         }
+        
+        const totalCount = Object.values(mergedDb).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
+        setTotalVisits(totalCount);
       } catch (e) {
         console.error("Failed to load global visits", e);
       }
