@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { UserProfile } from '../../types';
-import { fetchAllStudents, syncAllStudents, getSyncConfig, fetchGlobalVisits } from '../../utils/syncService';
+import { fetchAllStudents, syncAllStudents, getSyncConfig, fetchGlobalVisits, fetchGlobalQuizzes } from '../../utils/syncService';
 import { Users, LogIn, TrendingUp, Calendar, Search, ChevronDown, ChevronUp, BookOpen, GraduationCap, RefreshCcw, Upload, AlertCircle } from 'lucide-react';
 
 const STUDENT_DB_KEY = 'math_genius_student_db_v1';
@@ -103,7 +103,9 @@ export function AdminStatisticsScreen() {
             const globalVisits = await fetchGlobalVisits();
             setTotalLogins(globalVisits);
             
-            setTotalQuizzes(validUsersList.reduce((acc, s) => acc + (s.history?.length || 0), 0));
+            const globalQuizzes = await fetchGlobalQuizzes();
+            setTotalQuizzes(globalQuizzes);
+            
             setTotalUsers(validUsersList.length);
             setLastUpdated(new Date());
         } catch (e) {

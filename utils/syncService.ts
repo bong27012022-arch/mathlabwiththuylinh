@@ -199,3 +199,40 @@ export const incrementGlobalVisits = async () => {
         }
     } catch (e) { console.error(e) }
 };
+
+export const fetchGlobalQuizzes = async (): Promise<number> => {
+    const config = getSyncConfig();
+    if (!config.enabled || !config.databaseUrl) return 0;
+    try {
+        let baseUrl = config.databaseUrl.trim();
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+
+        const url = `${baseUrl}/stats/totalQuizzes.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        const response = await fetch(url);
+        if (response.ok) {
+            const data = await response.json();
+            return typeof data === 'number' ? data : 0;
+        }
+    } catch (e) { console.error(e) }
+    return 0;
+};
+
+export const incrementGlobalQuizzes = async () => {
+    const currentQuizzes = await fetchGlobalQuizzes();
+    const config = getSyncConfig();
+    if (!config.enabled || !config.databaseUrl) return;
+
+    try {
+        let baseUrl = config.databaseUrl.trim();
+        if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+
+        const url = `${baseUrl}/stats/totalQuizzes.json${config.secretKey ? `?auth=${config.secretKey}` : ''}`;
+        await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentQuizzes + 1)
+        });
+    } catch (e) { console.error(e) }
+};

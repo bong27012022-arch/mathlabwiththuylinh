@@ -31,7 +31,15 @@ import {
   setGlobalModel
 } from './utils/aiGenerator';
 import { getStudentDbId, removeAccents } from './utils/userUtils';
-import { syncStudentData, fetchGlobalConfig, saveGlobalConfig, getSyncConfig, saveSyncConfig, incrementGlobalVisits } from './utils/syncService';
+import { 
+  syncStudentData, 
+  fetchGlobalConfig, 
+  saveGlobalConfig, 
+  getSyncConfig, 
+  saveSyncConfig, 
+  incrementGlobalVisits,
+  incrementGlobalQuizzes 
+} from './utils/syncService';
 import { Loader2 } from 'lucide-react';
 import { STUDENT_ACCOUNTS } from './data/studentAccounts';
 
@@ -434,6 +442,9 @@ export default function App() {
   };
 
   const handleQuizFinish = (result: QuizResult) => {
+    // Tăng đếm tổng số bài thi trên Cloud (kể cả chưa đăng nhập)
+    incrementGlobalQuizzes();
+
     const finalResult: QuizResult = {
       ...result,
       timestamp: Date.now(),
