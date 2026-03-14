@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenName, UserProfile } from '../types';
+import { fetchAllStudents } from '../utils/syncService';
+
+const STUDENT_DB_KEY = 'math_genius_student_db_v1';
 import { Home, Map, BarChart2, User, Gamepad2, LogOut, Calculator, Key, Settings, Clock, Crown, X, Check, CreditCard, History, TrendingUp } from 'lucide-react';
 
 interface Props {
@@ -13,6 +16,32 @@ interface Props {
 export const SidebarNavigation: React.FC<Props> = ({ currentScreen, onNavigate, onLogout, user, onOpenSettings }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [totalVisits, setTotalVisits] = useState<number>(0);
+
+  useEffect(() => {
+    const loadVisits = async () => {
+      try {
+        const rawDb = localStorage.getItem(STUDENT_DB_KEY);
+        if (rawDb) {
+          const db = JSON.parse(rawDb);
+          const localCount = Object.values(db).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
+          setTotalVisits(localCount);
+        }
+        
+        const cloudDb = await fetchAllStudents();
+        if (cloudDb) {
+          const cloudCount = Object.values(cloudDb).reduce((acc: any, s: any) => acc + (s.loginDates?.length || 0), 0) as number;
+          setTotalVisits(cloudCount);
+        }
+      } catch (e) {
+        console.error("Failed to load global visits", e);
+      }
+    };
+    
+    loadVisits();
+    const interval = setInterval(loadVisits, 300000); // 5 mins
+    return () => clearInterval(interval);
+  }, []);
 
   const tabs = [
     { id: ScreenName.LEARNING_PATH, icon: Home, label: 'Lộ trình học' },
@@ -61,9 +90,19 @@ export const SidebarNavigation: React.FC<Props> = ({ currentScreen, onNavigate, 
     <>
       <div className="hidden md:flex flex-col w-80 h-screen bg-white border-r border-gray-200 fixed left-0 top-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         {/* Logo Area */}
-        <div className="p-6 flex flex-col items-start gap-4 border-b border-gray-50">
-          <div className="bg-gradient-to-br from-primary to-teal-600 p-3 rounded-2xl text-white shadow-lg shadow-teal-500/20">
-            <Calculator size={32} />
+        <div className="p-6 flex flex-col items-start gap-4 border-b border-gray-50 relative">
+          <div className="flex justify-between items-start w-full">
+            <div className="bg-gradient-to-br from-primary to-teal-600 p-3 rounded-2xl text-white shadow-lg shadow-teal-500/20">
+              <Calculator size={32} />
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Lượt truy cập</span>
+              <div className="bg-teal-50 text-teal-700 px-2.5 py-1 rounded-lg text-xs font-black border border-teal-100 flex items-center gap-1.5 shadow-sm" title="Tổng lượt truy cập thực tế">
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></div>
+                {totalVisits}
+              </div>
+            </div>
           </div>
           <div className="flex flex-col">
             <h1 className="text-2xl font-black text-teal-900 tracking-tight leading-tight uppercase font-display">
