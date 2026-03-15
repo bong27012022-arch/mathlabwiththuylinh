@@ -42,7 +42,7 @@ const generateWithFallback = async (
   ]));
 
   let lastError: any = null;
-  const TIMEOUT_MS = 12000; // 12 seconds per try
+  const TIMEOUT_MS = 30000; // Increased to 30 seconds to support 20 questions generation
 
   for (const model of modelsToTry) {
     try {
@@ -190,10 +190,11 @@ export const generateLearningPath = async (
 
   const prompt = `
     Đóng vai một chuyên gia giáo dục toán học AI.
-    Nhiệm vụ: Thiết kế danh sách các BÀI HỌC (Learning Units) cho lộ trình học tập Lớp ${user.grade}.
+    Nhiệm vụ: Thiết kế danh sách các BÀI HỌC (Learning Units) cho lộ trình học tập Toán THPT Lớp ${user.grade}.
     Chủ đề: ${topics.join(", ")}. Năng lực học sinh: ${levelDesc}.
     
     YÊU CẦU:
+    - CHỈ sử dụng kiến thức Toán THPT Lớp ${user.grade}, tuyệt đối KHÔNG dùng kiến thức Tiểu học/THCS.
     - Tạo 5-7 bài học cụ thể, súc tích.
     - KHÔNG tạo câu hỏi ở bước này.
     - Output JSON ONLY.
@@ -285,13 +286,15 @@ export const generateUnitQuestions = async (
   const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][(unit.level || 2) - 1];
   
   const prompt = `
-    Tạo 5-7 câu hỏi toán học Lớp ${user.grade} cho bài học: "${unit.title}".
+    Tạo ĐÚNG 20 câu hỏi toán học Lớp ${user.grade} (kiến thức THPT) cho bài học: "${unit.title}".
     Mô tả bài học: ${unit.description}.
     Độ khó: ${levelDesc}.
 
     YÊU CẦU:
+    - SỐ LƯỢNG: Phải tạo đủ 20 câu hỏi.
+    - NỘI DUNG: Phải là kiến thức Toán THPT Lớp ${user.grade}. TUYỆT ĐỐI KHÔNG dùng kiến thức cấp 1, cấp 2.
     - Đa dạng loại câu hỏi (trắc nghiệm, đúng/sai, điền khuyết).
-    - Phải có giải thích chi tiết.
+    - Phải có giải thích chi tiết cho từng câu.
     ${MATH_FORMATTING_RULES}
 
     === OUTPUT JSON ONLY ===
@@ -344,19 +347,19 @@ export const generateUnitQuestions = async (
       {
         id: "q_fb_1",
         type: "multiple-choice",
-        content: `Câu hỏi tự động (Lớp ${user.grade}): Kết quả của phép tính 15 + 27 là bao nhiêu?`,
-        options: ["32", "42", "52", "40"],
-        correctAnswer: "42",
-        explanation: "15 + 27 = 42. (Hệ thống AI đang quá tải, đây là câu hỏi dự phòng)",
+        content: `Câu hỏi ôn tập (Lớp ${user.grade}): Tìm tập xác định của hàm số y = √(x - 1)?`,
+        options: ["x > 1", "x ≥ 1", "x ≠ 1", "x < 1"],
+        correctAnswer: "x ≥ 1",
+        explanation: "Biểu thức dưới dấu căn phải không âm: x - 1 ≥ 0 ⇔ x ≥ 1. (Hệ thống AI đang quá tải, đây là câu hỏi dự phòng)",
         difficulty: "easy"
       },
       {
         id: "q_fb_2",
         type: "multiple-choice",
-        content: `Đâu là số chẵn trong các số sau?`,
-        options: ["13", "27", "44", "91"],
-        correctAnswer: "44",
-        explanation: "Số chẵn là số chia hết cho 2. (Hệ thống AI đang quá tải)",
+        content: `Trong mặt phẳng Oxy, cho điểm A(1, 2) và B(3, 4). Tọa độ trung điểm I của đoạn thẳng AB là:`,
+        options: ["I(2, 3)", "I(1, 1)", "I(4, 6)", "I(2, 2)"],
+        correctAnswer: "I(2, 3)",
+        explanation: "Tọa độ trung điểm I là ((x_A+x_B)/2, (y_A+y_B)/2) = ((1+3)/2, (2+4)/2) = (2, 3).",
         difficulty: "easy"
       }
     ];
@@ -371,7 +374,7 @@ export const generateChallengeUnit = async (
     const prompt = `
       Tạo PHIÊN BẢN NÂNG CAO (Level ${nextLevel}) cho bài học "${currentUnit.title}".
       - Lớp: ${user.grade}
-      - Số lượng: 10-15 câu (20% Trung bình, 80% Khó).
+      - Số lượng: ĐÚNG 20 câu (20% Trung bình, 80% Khó).
       - Output JSON ONLY (Single Unit structure).
       
       ${MATH_FORMATTING_RULES}
