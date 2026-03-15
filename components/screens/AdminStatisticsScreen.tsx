@@ -25,10 +25,12 @@ function getClassColor(grade: number) {
 export function AdminStatisticsScreen() {
     const [students, setStudents] = useState<UserProfile[]>([]);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [totalActiveUsers, setTotalActiveUsers] = useState(0);
     const [totalLogins, setTotalLogins] = useState(0);
     const [totalQuizzes, setTotalQuizzes] = useState(0);
     const [allGrades, setAllGrades] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeOnly, setActiveOnly] = useState(false);
     const [openClasses, setOpenClasses] = useState<Set<number>>(new Set());
     const [filterGrade, setFilterGrade] = useState<number | null>(null);
     const [showAdmins, setShowAdmins] = useState(false);
@@ -106,6 +108,9 @@ export function AdminStatisticsScreen() {
             const globalQuizzes = await fetchGlobalQuizzes();
             setTotalQuizzes(globalQuizzes);
             
+            const activeUserCount = validUsersList.filter(u => u.loginDates && u.loginDates.length > 0).length;
+            setTotalActiveUsers(activeUserCount);
+            
             setTotalUsers(validUsersList.length);
             setLastUpdated(new Date());
         } catch (e) {
@@ -142,9 +147,10 @@ export function AdminStatisticsScreen() {
         return students.filter(student => {
             if (!student || !student.name) return false;
             const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesSearch;
+            const matchesActive = !activeOnly || (student.loginDates && student.loginDates.length > 0);
+            return matchesSearch && matchesActive;
         });
-    }, [students, searchTerm]);
+    }, [students, searchTerm, activeOnly]);
 
     // 2. Further filter by Grade for display
     const filteredStudents = useMemo(() => {
@@ -297,8 +303,19 @@ export function AdminStatisticsScreen() {
 
                 {/* Total Logins */}
                 <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shrink-0">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-teal-100 rounded-xl flex items-center justify-center text-teal-600 shrink-0">
                         <LogIn className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <div>
+                        <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">HS Truy cập</p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">{totalActiveUsers}</p>
+                    </div>
+                </div>
+
+                {/* Total Class Progress or Global Visits */}
+                <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shrink-0">
+                        <TrendingUp className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wide">Lượt truy cập</p>
@@ -341,6 +358,16 @@ export function AdminStatisticsScreen() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                         />
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
+                        <input 
+                            type="checkbox" 
+                            id="active-only"
+                            checked={activeOnly}
+                            onChange={(e) => setActiveOnly(e.target.checked)}
+                            className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <label htmlFor="active-only" className="text-xs text-gray-500 cursor-pointer select-none">Chỉ hiện HS đã truy cập</label>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
                         <input 
