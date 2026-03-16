@@ -7,8 +7,13 @@ let GLOBAL_API_KEY = "";
 let PREFERRED_MODEL = "gemini-1.5-flash";
 
 const MODEL_FALLBACK_LIST = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
   "gemini-1.5-flash",
-  "gemini-1.5-flash-8b"
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
+  "gemini-1.0-pro",
+  "gemini-pro"
 ];
 
 export const setGlobalApiKey = (key: string) => {
@@ -24,9 +29,8 @@ export const setGlobalModel = (model: string) => {
   }
 
   // Handle fictional future models or known problematic models from UI/Cloud
-  if (actualModel.includes("gemini-3") || actualModel.includes("pro") || actualModel.includes("preview")) {
-    // Force transition to ultra-stable flash for now to fix user issues
-    actualModel = "gemini-1.5-flash"; 
+  if (actualModel.includes("gemini-3") || actualModel.includes("preview")) {
+    actualModel = "gemini-2.0-flash"; 
   }
   
   PREFERRED_MODEL = actualModel;
@@ -38,10 +42,15 @@ const generateWithFallback = async (
   config: any,
   taskName: string = "Generation"
 ): Promise<any> => {
-  // Ultra-resilient model sequence: Start with Flash (fastest/most likely available), then fallbacks
+  // Ultra-resilient model sequence: Try newest stable models first, then fall back to older ones
   const modelsToTry = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-8b"
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+    "gemini-1.0-pro",
+    "gemini-pro"
   ];
   
   // If user has a valid preference, put it at front (but still try flash if it fails)
