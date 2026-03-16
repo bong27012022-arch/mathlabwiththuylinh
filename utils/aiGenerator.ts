@@ -9,6 +9,7 @@ let PREFERRED_MODEL = "gemini-1.5-flash";
 const MODEL_FALLBACK_LIST = [
   "gemini-1.5-flash",
   "gemini-1.5-pro",
+  "gemini-pro",
   "gemini-1.0-pro"
 ];
 
@@ -24,9 +25,12 @@ export const setGlobalModel = (model: string) => {
     actualModel = actualModel.replace("models/", "");
   }
 
-  // Handle fictional future models from UI
+  // Handle fictional future models or incorrect naming from UI
   if (actualModel.includes("gemini-3")) {
-    actualModel = actualModel.replace("gemini-3", "gemini-1.5");
+    actualModel = "gemini-1.5-flash"; // Default to a known stable model
+  }
+  if (actualModel.includes("flash-preview")) {
+    actualModel = "gemini-1.5-flash";
   }
 
   PREFERRED_MODEL = actualModel;
@@ -42,10 +46,11 @@ const generateWithFallback = async (
     throw new Error("Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng AI.");
   }
 
-  // Prioritize selected model, then try at most TWO fallbacks
+  // Expanded fallback list for maximum reliability
   const modelsToTry = Array.from(new Set([
     PREFERRED_MODEL,
     "gemini-1.5-flash",
+    "gemini-pro",
     "gemini-1.5-pro"
   ]));
 
