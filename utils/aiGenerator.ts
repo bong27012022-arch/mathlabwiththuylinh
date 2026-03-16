@@ -331,7 +331,7 @@ export const generateUnitQuestions = async (
             id: { type: Type.STRING },
             type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
             content: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
+            options: { type: Type.ARRAY, items: { type: Type.STRING } },
             correctAnswer: { type: Type.STRING },
             explanation: { type: Type.STRING },
             difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
@@ -364,24 +364,25 @@ export const generateUnitQuestions = async (
     return parsed.questions;
   } catch (error) {
     console.error("Question Generation Error:", error);
-    // FALLBACK: Return basic questions if AI fails
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // FALLBACK: Return error-diagnostic questions if AI fails
     return [
       {
         id: "q_fb_1",
         type: "multiple-choice",
-        content: `Câu hỏi ôn tập (Lớp ${user.grade}): Tìm tập xác định của hàm số y = √(x - 1)?`,
-        options: ["x > 1", "x ≥ 1", "x ≠ 1", "x < 1"],
-        correctAnswer: "x ≥ 1",
-        explanation: "Biểu thức dưới dấu căn phải không âm: x - 1 ≥ 0 ⇔ x ≥ 1. (Hệ thống AI đang quá tải, đây là câu hỏi dự phòng)",
+        content: `[LỖI AI] Không thể tạo câu hỏi. Chi tiết lỗi: ${errorMessage}`,
+        options: ["Đóng", "Thử lại", "Báo lỗi", "Tiếp tục"],
+        correctAnswer: "Thử lại",
+        explanation: "Vui lòng chụp màn hình lỗi này. (Lý do: API Key sai, AI quá tải, hoặc cấu trúc Prompt bị phía Google từ chối).",
         difficulty: "easy"
       },
       {
         id: "q_fb_2",
         type: "multiple-choice",
-        content: `Trong mặt phẳng Oxy, cho điểm A(1, 2) và B(3, 4). Tọa độ trung điểm I của đoạn thẳng AB là:`,
-        options: ["I(2, 3)", "I(1, 1)", "I(4, 6)", "I(2, 2)"],
-        correctAnswer: "I(2, 3)",
-        explanation: "Tọa độ trung điểm I là ((x_A+x_B)/2, (y_A+y_B)/2) = ((1+3)/2, (2+4)/2) = (2, 3).",
+        content: `Chủ đề bị lỗi: ${unit.title} (Lớp ${user.grade})`,
+        options: ["A", "B", "C", "D"],
+        correctAnswer: "A",
+        explanation: `Hệ thống dùng tạm 2 câu này do AI tạo đề thất bại với lý do: ${errorMessage}`,
         difficulty: "easy"
       }
     ];
