@@ -42,7 +42,7 @@ const generateWithFallback = async (
   ]));
 
   let lastError: any = null;
-  const TIMEOUT_MS = 30000; // Increased to 30 seconds to support 20 questions generation
+  const TIMEOUT_MS = 90000; // Increased to 90 seconds for high reliability
 
   for (const model of modelsToTry) {
     try {
@@ -52,7 +52,14 @@ const generateWithFallback = async (
         ai.models.generateContent({
           model: model,
           contents: contents,
-          config: config
+          config: {
+            ...config,
+            generationConfig: {
+              ...config?.generationConfig,
+              maxOutputTokens: 2048,
+              temperature: config?.temperature || 0.7
+            }
+          }
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), TIMEOUT_MS))
       ]) as any;
@@ -300,15 +307,15 @@ export const generateUnitQuestions = async (
   const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][(unit.level || 2) - 1];
   
   const prompt = `
-    Tạo ĐÚNG 20 câu hỏi toán học Lớp ${user.grade} (kiến thức THPT) cho bài học: "${unit.title}".
+    Tạo ĐÚNG 10 câu hỏi toán học Lớp ${user.grade} (kiến thức THPT) cho bài học: "${unit.title}".
     Mô tả bài học: ${unit.description}.
     Độ khó: ${levelDesc}.
 
     YÊU CẦU CHẤT LƯỢNG (QUAN TRỌNG):
     - TUÂN THỦ: Chương trình GDPT 2018 và SGK Kết nối tri thức.
-    - SỐ LƯỢNG: Phải tạo đủ 20 câu hỏi.
+    - SỐ LƯỢNG: Phải tạo đủ ĐÚNG 10 câu hỏi.
     - NỘI DUNG: Phải là kiến thức Toán THPT Lớp ${user.grade}. TUYỆT ĐỐI KHÔNG dùng kiến thức cấp 1, cấp 2.
-    - DẠNG BÀI: Đa dạng loại câu hỏi (trắc nghiệm, đúng/sai, điền biểu thức/số).
+    - DẠNG BÀI: Đa dạng loại câu hỏi (trắc nghiệm 4 lựa chọn, đúng/sai, điền biểu thức/số).
     - GIẢI THÍCH: Phải có giải thích chi tiết, sư phạm, bước học sinh dễ hiểu.
     ${VIETNAMESE_CURRICULUM_GUIDELINES}
     ${MATH_FORMATTING_RULES}
@@ -393,7 +400,7 @@ export const generateChallengeUnit = async (
     const prompt = `
       Tạo PHIÊN BẢN NÂNG CAO (Level ${nextLevel}) cho bài học "${currentUnit.title}".
       - Lớp: ${user.grade}
-      - Số lượng: ĐÚNG 20 câu (20% Trung bình, 80% Khó).
+      - Số lượng: ĐÚNG 10 câu (20% Trung bình, 80% Khó).
       - Yêu cầu: Bám sát Chương trình GDPT 2018, độ khó nâng cao, tính phân hóa cao.
       - Output JSON ONLY (Single Unit structure).
       
@@ -455,14 +462,27 @@ export const generateChallengeUnit = async (
     };
   } catch (error) {
     console.error("Challenge Gen Error", error);
-    return null;
+    // FALLBACK: Return the current unit but upgraded level and a note
+    return {
+      ...currentUnit,
+      level: nextLevel,
+      status: 'active',
+      title: `${currentUnit.title} (Nâng cao - Dự phòng)`,
+      description: "Hệ thống AI đang bận, tạm thời sử dụng bộ câu hỏi ôn tập chuyên sâu. Vui lòng thử lại sau để có bộ câu hỏi mới nhất.",
+      questions: currentUnit.questions.map((q, i) => ({
+        ...q,
+        id: `challenge_fb_${i}`,
+        difficulty: 'hard',
+        content: `[Nâng cao] ${q.content}`
+      }))
+    };
   }
 };
 
 export const generateComprehensiveTest = async (user: UserProfile): Promise<LearningUnit | null> => {
   const prompt = `
     Tạo BÀI KIỂM TRA TỔNG HỢP (Final Exam) cho học sinh Lớp ${user.grade}.
-    - 20 câu hỏi (5 Dễ, 10 TB, 5 Khó).
+    - 10 câu hỏi (2 Dễ, 5 TB, 3 Khó).
     - Đủ 3 loại câu hỏi: trắc nghiệm 4 lựa chọn, đúng/sai, điền biểu thức/số.
     - Nội dung: Bao quát toàn bộ chương trình lớp ${user.grade} theo GDPT 2018.
     - Output JSON ONLY (Single Unit structure).

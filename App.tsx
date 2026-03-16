@@ -404,18 +404,28 @@ export default function App() {
     try {
       const newUnit = await generateChallengeUnit(user, unit);
       if (newUnit && user.learningPath) {
+        // Ensure the unit is updated in the path
         const updatedPath = user.learningPath.map(u =>
           u.id === unit.id ? newUnit : u
         );
+        
         setUser(prev => ({ ...prev, learningPath: updatedPath }));
         setActiveUnit(newUnit);
         setIsReviewingQuiz(false);
         setLastQuizResult(null);
-        setCurrentScreen(ScreenName.QUIZ);
+        
+        // Use a small timeout to ensure state settles before switching screen
+        setTimeout(() => {
+          setCurrentScreen(ScreenName.QUIZ);
+          setIsGenerating(false);
+        }, 100);
+      } else {
+        alert("Không thể tạo bài tập nâng cao lúc này. Vui lòng thử lại sau.");
+        setIsGenerating(false);
       }
     } catch (error) {
       console.error("Failed to generate challenge", error);
-    } finally {
+      alert("Hệ thống gặp lỗi khi tạo bài tập nâng cao.");
       setIsGenerating(false);
     }
   };
