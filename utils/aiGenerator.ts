@@ -8,8 +8,7 @@ let PREFERRED_MODEL = "gemini-1.5-flash";
 
 const MODEL_FALLBACK_LIST = [
   "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-pro"
+  "gemini-1.5-flash-8b"
 ];
 
 export const setGlobalApiKey = (key: string) => {
@@ -42,19 +41,15 @@ const generateWithFallback = async (
   // Ultra-resilient model sequence: Start with Flash (fastest/most likely available), then fallbacks
   const modelsToTry = [
     "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro"
+    "gemini-1.5-flash-8b"
   ];
   
   // If user has a valid preference, put it at front (but still try flash if it fails)
   if (PREFERRED_MODEL && !modelsToTry.includes(PREFERRED_MODEL)) {
     modelsToTry.unshift(PREFERRED_MODEL);
-  } else if (PREFERRED_MODEL === "gemini-1.5-pro") {
-      // Invert if they specifically want Pro, but we still prefer Flash first
-      // Actually, let's keep Flash first to ensure success
   }
 
-  let lastError: any = null;
+  let errors: string[] = [];
   const TIMEOUT_MS = 90000; // Increased to 90 seconds for high reliability
 
   for (const model of modelsToTry) {
@@ -87,7 +82,7 @@ const generateWithFallback = async (
       return response;
     } catch (error: any) {
       console.warn(`${taskName} failed with ${model}. Error:`, error);
-      lastError = error;
+      errors.push(`[${model}] ${error.message}`);
       
       // If we hit a rate limit (429), don't bother trying other models on the same tier, just fail fast
       if (error?.status === 429 || error?.message?.includes("429")) {
@@ -97,7 +92,7 @@ const generateWithFallback = async (
   }
 
   // If all failed
-  throw lastError || new Error("Tất cả các mô hình AI đều không phản hồi. Vui lòng kiểm tra API Key hoặc thử lại sau.");
+  throw new Error(`AI không phản hồi. Chi tiết: ${errors.join(' | ')}`);
 };
 
 const MATH_FORMATTING_RULES = `
