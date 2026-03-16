@@ -57,9 +57,15 @@ const generateWithFallback = async (
     try {
       const ai = new GoogleGenAI({ apiKey: GLOBAL_API_KEY });
       
+      // Defensively strip "models/" again right before calling the SDK
+      let cleanModel = model;
+      if (cleanModel.startsWith("models/")) {
+        cleanModel = cleanModel.replace("models/", "");
+      }
+      
       const response = await Promise.race([
         ai.models.generateContent({
-          model: model,
+          model: cleanModel,
           contents: contents,
           config: {
             ...config,
