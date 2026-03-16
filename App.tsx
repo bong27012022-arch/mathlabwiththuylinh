@@ -69,7 +69,7 @@ export default function App() {
     incrementGlobalVisits();
     
     const storedKey = localStorage.getItem(API_KEY_STORAGE);
-    const storedModel = localStorage.getItem(MODEL_STORAGE) || 'gemini-1.5-flash';
+    const storedModel = localStorage.getItem(MODEL_STORAGE) === 'gemini-1.5-pro' ? 'gemini-1.5-flash' : (localStorage.getItem(MODEL_STORAGE) || 'gemini-1.5-flash');
 
     if (storedKey) {
       setApiKey(storedKey);

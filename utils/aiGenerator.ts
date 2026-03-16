@@ -8,9 +8,8 @@ let PREFERRED_MODEL = "gemini-1.5-flash";
 
 const MODEL_FALLBACK_LIST = [
   "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gemini-pro",
-  "gemini-1.0-pro"
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro"
 ];
 
 export const setGlobalApiKey = (key: string) => {
@@ -25,14 +24,12 @@ export const setGlobalModel = (model: string) => {
     actualModel = actualModel.replace("models/", "");
   }
 
-  // Handle fictional future models or incorrect naming from UI
-  if (actualModel.includes("gemini-3")) {
-    actualModel = "gemini-1.5-flash"; // Default to a known stable model
+  // Handle fictional future models or known problematic models from UI/Cloud
+  if (actualModel.includes("gemini-3") || actualModel.includes("pro") || actualModel.includes("preview")) {
+    // Force transition to ultra-stable flash for now to fix user issues
+    actualModel = "gemini-1.5-flash"; 
   }
-  if (actualModel.includes("flash-preview")) {
-    actualModel = "gemini-1.5-flash";
-  }
-
+  
   PREFERRED_MODEL = actualModel;
 };
 
@@ -42,17 +39,20 @@ const generateWithFallback = async (
   config: any,
   taskName: string = "Generation"
 ): Promise<any> => {
-  if (!GLOBAL_API_KEY) {
-    throw new Error("Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng AI.");
-  }
-
-  // Expanded fallback list for maximum reliability
-  const modelsToTry = Array.from(new Set([
-    PREFERRED_MODEL,
+  // Ultra-resilient model sequence: Start with Flash (fastest/most likely available), then fallbacks
+  const modelsToTry = [
     "gemini-1.5-flash",
-    "gemini-pro",
+    "gemini-1.5-flash-8b",
     "gemini-1.5-pro"
-  ]));
+  ];
+  
+  // If user has a valid preference, put it at front (but still try flash if it fails)
+  if (PREFERRED_MODEL && !modelsToTry.includes(PREFERRED_MODEL)) {
+    modelsToTry.unshift(PREFERRED_MODEL);
+  } else if (PREFERRED_MODEL === "gemini-1.5-pro") {
+      // Invert if they specifically want Pro, but we still prefer Flash first
+      // Actually, let's keep Flash first to ensure success
+  }
 
   let lastError: any = null;
   const TIMEOUT_MS = 90000; // Increased to 90 seconds for high reliability
