@@ -76,9 +76,13 @@ const generateWithFallback = async (
         systemInstruction: config?.systemInstruction
       });
 
-      const response = await Promise.race([
+      const reqContents = typeof contents === 'string' 
+        ? [{ role: "user", parts: [{ text: contents }] }]
+        : (Array.isArray(contents) ? contents : [contents]);
+
+      const result = await Promise.race([
         genModel.generateContent({
-          contents: [{ role: "user", parts: [{ text: contents }] }],
+          contents: reqContents,
           generationConfig: {
             responseMimeType: config?.responseMimeType || "application/json",
             maxOutputTokens: 8192,
@@ -88,7 +92,7 @@ const generateWithFallback = async (
         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), TIMEOUT_MS))
       ]) as any;
 
-      return response;
+      return { text: result.response.text() };
     } catch (error: any) {
       console.warn(`${taskName} failed with ${model}. Error:`, error);
       errors.push(`[${model}] ${error.message}`);
