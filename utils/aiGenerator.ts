@@ -97,14 +97,23 @@ const generateWithFallback = async (
       console.warn(`${taskName} failed with ${model}. Error:`, error);
       errors.push(`[${model}] ${error.message}`);
       
-      // If we hit a rate limit (429), don't bother trying other models on the same tier, just fail fast
-      if (error?.status === 429 || error?.message?.includes("429")) {
-        break; 
+      // If we hit a rate limit/quota issue (429), log clearly but CONTINUE trying other models
+      // because different model tiers (e.g. 1.0 vs 2.5) have separate rate limit buckets
+      if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("quota")) {
+        errors.push(`[${model}] Hết lượt sử dụng miễn phí (Quota Exceeded). Vui lòng thử lại sau vài phút hoặc dùng API Key khác.`);
+        // We removed the 'break' here to ensure the system exhaustively tries all fallback models
+      } else {
+        errors.push(`[${model}] ${error.message}`);
       }
     }
   }
 
-  // If all failed
+  // If all failed, provide a very clear human-readable summary if it's purely a quota issue
+  const allQuotaErrors = errors.every(e => e.includes("Hết lượt sử dụng") || e.includes("429"));
+  if (allQuotaErrors) {
+      throw new Error(`API Key của bạn đã hết lượt sử dụng miễn phí (Quota Exceeded) cho tất cả các mô hình. Vui lòng tạo API Key mới từ Google AI Studio hoặc nâng cấp tài khoản, sau đó vào phần Cài đặt của ứng dụng để cập nhật.`);
+  }
+
   throw new Error(`AI không phản hồi. Chi tiết: ${errors.join(' | ')}`);
 };
 
