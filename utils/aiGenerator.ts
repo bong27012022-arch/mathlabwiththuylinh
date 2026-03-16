@@ -19,9 +19,18 @@ export const setGlobalApiKey = (key: string) => {
 };
 
 export const setGlobalModel = (model: string) => {
-  // Map internal UI names to actual Google SDK model IDs if necessary
   let actualModel = model;
-  if (model.includes("gemini-3")) actualModel = model.replace("gemini-3", "gemini-1.5");
+  
+  // Clean up exact names from UI dropdowns which might include "models/" prefix
+  if (actualModel.startsWith("models/")) {
+    actualModel = actualModel.replace("models/", "");
+  }
+
+  // Handle fictional future models from UI
+  if (actualModel.includes("gemini-3")) {
+    actualModel = actualModel.replace("gemini-3", "gemini-1.5");
+  }
+
   PREFERRED_MODEL = actualModel;
 };
 
