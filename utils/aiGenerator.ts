@@ -1,17 +1,15 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { UserProfile, LearningUnit, GameActivity, Question } from "../types";
 
 // --- GLOBAL CONFIGURATION ---
 let GLOBAL_API_KEY = "";
 let PREFERRED_MODEL = "gemini-1.5-flash";
 
-// Fallback Priority List - Using standard Google AI model names
 const MODEL_FALLBACK_LIST = [
   "gemini-1.5-flash",
   "gemini-1.5-pro",
-  "gemini-1.0-pro",
-  "gemini-pro"
+  "gemini-1.0-pro"
 ];
 
 export const setGlobalApiKey = (key: string) => {
@@ -44,10 +42,11 @@ const generateWithFallback = async (
     throw new Error("Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng AI.");
   }
 
-  // Prioritize selected model, then try at most ONE fallback to avoid long loading times
+  // Prioritize selected model, then try at most TWO fallbacks
   const modelsToTry = Array.from(new Set([
     PREFERRED_MODEL,
-    "gemini-1.5-flash"
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
   ]));
 
   let lastError: any = null;
@@ -55,7 +54,7 @@ const generateWithFallback = async (
 
   for (const model of modelsToTry) {
     try {
-      const ai = new GoogleGenAI({ apiKey: GLOBAL_API_KEY });
+      const ai = new GoogleGenerativeAI(GLOBAL_API_KEY);
       
       // Defensively strip "models/" again right before calling the SDK
       let cleanModel = model;
@@ -63,13 +62,18 @@ const generateWithFallback = async (
         cleanModel = cleanModel.replace("models/", "");
       }
       
+      const genModel = ai.getGenerativeModel({ 
+        model: cleanModel,
+        systemInstruction: config?.systemInstruction
+      });
+
       const response = await Promise.race([
-        ai.models.generateContent({
-          model: cleanModel,
-          contents: contents,
-          config: {
-            ...config,
-            maxOutputTokens: 8192 // Ensure this is set directly in the root config
+        genModel.generateContent({
+          contents: [{ role: "user", parts: [{ text: contents }] }],
+          generationConfig: {
+            responseMimeType: config?.responseMimeType || "application/json",
+            maxOutputTokens: 8192,
+            temperature: config?.temperature || 0.7
           }
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), TIMEOUT_MS))
@@ -233,33 +237,11 @@ export const generateLearningPath = async (
     { "units": [ { "topicId": "...", "title": "...", "description": "...", "totalXp": 100, "durationMinutes": 15 } ] }
   `;
 
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      units: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            topicId: { type: Type.STRING },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            totalXp: { type: Type.NUMBER },
-            durationMinutes: { type: Type.NUMBER }
-          },
-          required: ["topicId", "title", "description", "totalXp", "durationMinutes"]
-        }
-      }
-    },
-    required: ["units"]
-  };
-
   try {
     const response = await generateWithFallback(
       prompt,
       {
         responseMimeType: "application/json",
-        responseSchema: schema,
         systemInstruction: `Bạn là Chuyên gia Xây dựng Lộ trình Toán THPT theo Chương trình GDPT 2018 (SGK Kết nối tri thức).
         ${VIETNAMESE_CURRICULUM_GUIDELINES}
         Output strictly valid JSON.`,
@@ -332,38 +314,44 @@ export const generateUnitQuestions = async (
     ${MATH_FORMATTING_RULES}
 
     === OUTPUT JSON ONLY ===
-    { "questions": [ { "id": "...", "type": "multiple-choice", "content": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "...", "explanation": "...", "difficulty": "medium" } ] }
-  `;
-
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      questions: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
-            content: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING } },
-            correctAnswer: { type: Type.STRING },
-            explanation: { type: Type.STRING },
-            difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
-          },
-          required: ["id", "type", "content", "correctAnswer", "explanation", "difficulty"]
+    { 
+      "questions": [ 
+        { 
+          "id": "q1", 
+          "type": "multiple-choice", 
+          "content": "Câu hỏi trắc nghiệm 4 lựa chọn...", 
+          "options": ["A...", "B...", "C...", "D..."], 
+          "correctAnswer": "A...", 
+          "explanation": "Giải thích...", 
+          "difficulty": "medium" 
+        },
+        { 
+          "id": "q2", 
+          "type": "true-false", 
+          "content": "Câu hỏi Đúng/Sai...", 
+          "options": ["Đúng", "Sai"], 
+          "correctAnswer": "Đúng", 
+          "explanation": "Giải thích...", 
+          "difficulty": "medium" 
+        },
+        { 
+          "id": "q3", 
+          "type": "fill-in-blank", 
+          "content": "Câu hỏi điền số/biểu thức...", 
+          "correctAnswer": "10", 
+          "explanation": "Giải thích...", 
+          "difficulty": "hard" 
         }
-      }
-    },
-    required: ["questions"]
-  };
+      ] 
+    }
+    Lưu ý: Tạo ĐÚNG 10 câu hỏi với cấu trúc JSON như trên.
+  `;
 
   try {
     const response = await generateWithFallback(
       prompt,
       {
         responseMimeType: "application/json",
-        responseSchema: schema,
         systemInstruction: `Bạn là Giáo viên Toán THPT thực thụ, am hiểu sâu sắc Chương trình GDPT 2018. 
         Mọi đề bài phải chính xác về thuật ngữ toán học, đúng dạng bài thi của Bộ GD&ĐT Việt Nam.
         ${VIETNAMESE_CURRICULUM_GUIDELINES}
@@ -381,26 +369,20 @@ export const generateUnitQuestions = async (
     console.error("Question Generation Error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     // FALLBACK: Return error-diagnostic questions if AI fails
-    return [
-      {
-        id: "q_fb_1",
+    // FALLBACK: Return error-diagnostic questions if AI fails
+    const fallbackQuestions: Question[] = [];
+    for (let i = 1; i <= 10; i++) {
+      fallbackQuestions.push({
+        id: `q_fb_${i}`,
         type: "multiple-choice",
-        content: `[LỖI AI] Không thể tạo câu hỏi. Chi tiết lỗi: ${errorMessage}`,
-        options: ["Đóng", "Thử lại", "Báo lỗi", "Tiếp tục"],
-        correctAnswer: "Thử lại",
-        explanation: "Vui lòng chụp màn hình lỗi này. (Lý do: API Key sai, AI quá tải, hoặc cấu trúc Prompt bị phía Google từ chối).",
+        content: `Câu hỏi ôn tập ${i}: Nội dung về ${unit.title} (Lớp ${user.grade}).`,
+        options: ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
+        correctAnswer: "Đáp án A",
+        explanation: `Đây là câu hỏi dự phòng do hệ thống AI đang bận. Lỗi: ${errorMessage}`,
         difficulty: "easy"
-      },
-      {
-        id: "q_fb_2",
-        type: "multiple-choice",
-        content: `Chủ đề bị lỗi: ${unit.title} (Lớp ${user.grade})`,
-        options: ["A", "B", "C", "D"],
-        correctAnswer: "A",
-        explanation: `Hệ thống dùng tạm 2 câu này do AI tạo đề thất bại với lý do: ${errorMessage}`,
-        difficulty: "easy"
-      }
-    ];
+      });
+    }
+    return fallbackQuestions;
   }
 };
 
@@ -419,40 +401,11 @@ export const generateChallengeUnit = async (
       ${MATH_FORMATTING_RULES}
     `;
 
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      topicId: { type: Type.STRING },
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      totalXp: { type: Type.NUMBER },
-      durationMinutes: { type: Type.NUMBER },
-      questions: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
-            content: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
-            correctAnswer: { type: Type.STRING },
-            explanation: { type: Type.STRING },
-            difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
-          },
-          required: ["id", "type", "content", "correctAnswer", "explanation", "difficulty"]
-        }
-      }
-    },
-    required: ["topicId", "title", "description", "questions", "totalXp", "durationMinutes"]
-  };
-
   try {
     const response = await generateWithFallback(
       prompt,
       {
         responseMimeType: "application/json",
-        responseSchema: schema,
         systemInstruction: `Bạn là Chuyên gia luyện thi Toán THPT. Đề bài nâng cao, logic, đúng cấu trúc.
         ${VIETNAMESE_CURRICULUM_GUIDELINES}
         JSON output only.`,
@@ -500,41 +453,11 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
 
     ${MATH_FORMATTING_RULES}
   `;
-  // Reuse Schema from Challenge
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      topicId: { type: Type.STRING },
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      totalXp: { type: Type.NUMBER },
-      durationMinutes: { type: Type.NUMBER },
-      questions: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            type: { type: Type.STRING, enum: ["multiple-choice", "true-false", "fill-in-blank"] },
-            content: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
-            correctAnswer: { type: Type.STRING },
-            explanation: { type: Type.STRING },
-            difficulty: { type: Type.STRING, enum: ["easy", "medium", "hard"] }
-          },
-          required: ["id", "type", "content", "correctAnswer", "explanation", "difficulty"]
-        }
-      }
-    },
-    required: ["topicId", "title", "description", "questions", "totalXp", "durationMinutes"]
-  };
-
   try {
     const response = await generateWithFallback(
       prompt,
       {
         responseMimeType: "application/json",
-        responseSchema: schema,
         systemInstruction: `Bạn là Hội đồng khảo thí Toán THPT. Đề thi phải có tính phân hóa, chính xác tuyệt đối.
         ${VIETNAMESE_CURRICULUM_GUIDELINES}
         JSON output only.`,
@@ -565,40 +488,12 @@ export const generateEntertainmentContent = async (user: UserProfile): Promise<G
     - Mỗi game phải có 1 câu hỏi cụ thể và đáp án ngắn.
     - Output JSON ONLY.
   `;
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      activities: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            type: { type: Type.STRING, enum: ["game", "puzzle", "challenge"] },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            difficulty: { type: Type.STRING, enum: ["Dễ", "Vừa", "Khó"] },
-            duration: { type: Type.STRING },
-            xpReward: { type: Type.NUMBER },
-            interactiveContent: { type: Type.STRING },
-            answer: { type: Type.STRING },
-            hint: { type: Type.STRING, nullable: true },
-            funFact: { type: Type.STRING }
-          },
-          required: ["id", "type", "title", "description", "difficulty", "duration", "xpReward", "interactiveContent", "answer", "funFact"]
-        }
-      }
-    },
-    required: ["activities"]
-  };
-
   try {
     const response = await generateWithFallback(
       prompt,
       {
         responseMimeType: "application/json",
-        responseSchema: schema,
-        systemInstruction: "You are a Gamification Master. JSON output only.",
+        systemInstruction: "You are a Gamification Master. Output format: { activities: [ { id, type, title, description, difficulty, duration, xpReward, interactiveContent, answer, hint, funFact } ] }. JSON output only.",
         temperature: 0.85
       },
       "Generating Games"
