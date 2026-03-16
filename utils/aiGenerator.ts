@@ -54,11 +54,7 @@ const generateWithFallback = async (
           contents: contents,
           config: {
             ...config,
-            generationConfig: {
-              ...config?.generationConfig,
-              maxOutputTokens: 2048,
-              temperature: config?.temperature || 0.7
-            }
+            maxOutputTokens: 8192 // Ensure this is set directly in the root config
           }
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), TIMEOUT_MS))
@@ -317,7 +313,7 @@ export const generateUnitQuestions = async (
     - NỘI DUNG: Phải là kiến thức Toán THPT Lớp ${user.grade}. TUYỆT ĐỐI KHÔNG dùng kiến thức cấp 1, cấp 2.
     - DẠNG BÀI: Đa dạng loại câu hỏi (trắc nghiệm 4 lựa chọn, đúng/sai, điền biểu thức/số).
     - GIẢI THÍCH: Phải có giải thích chi tiết, sư phạm, bước học sinh dễ hiểu.
-    ${VIETNAMESE_CURRICULUM_GUIDELINES}
+    
     ${MATH_FORMATTING_RULES}
 
     === OUTPUT JSON ONLY ===
@@ -404,7 +400,6 @@ export const generateChallengeUnit = async (
       - Yêu cầu: Bám sát Chương trình GDPT 2018, độ khó nâng cao, tính phân hóa cao.
       - Output JSON ONLY (Single Unit structure).
       
-      ${VIETNAMESE_CURRICULUM_GUIDELINES}
       ${MATH_FORMATTING_RULES}
     `;
 
@@ -487,7 +482,6 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
     - Nội dung: Bao quát toàn bộ chương trình lớp ${user.grade} theo GDPT 2018.
     - Output JSON ONLY (Single Unit structure).
 
-    ${VIETNAMESE_CURRICULUM_GUIDELINES}
     ${MATH_FORMATTING_RULES}
   `;
   // Reuse Schema from Challenge
