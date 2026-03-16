@@ -85,6 +85,18 @@ QUY TẮC HIỂN THỊ CÔNG THỨC TOÁN HỌC (QUAN TRỌNG):
 8. ĐỊNH DẠNG: Với các biểu thức phức tạp, hãy dùng thẻ HTML để trình bày rõ ràng. Đảm bảo thẻ HTML đóng đúng.
 `;
 
+const VIETNAMESE_CURRICULUM_GUIDELINES = `
+CHƯƠNG TRÌNH GIÁO DỤC PHỔ THÔNG 2018 - TOÁN THPT (Lớp 10, 11, 12):
+- LỚP 10: Tập trung vào Logic toán học, Tập hợp, Bất phương trình bậc nhất 2 ẩn, Hệ thức lượng trong tam giác, Vectơ, Thống kê, Hàm số bậc hai, Dấu tam thức bậc hai, Phương pháp tọa độ trong mặt phẳng, Đại số tổ hợp, Xác suất.
+- LỚP 11: Hàm số lượng giác, Phương trình lượng giác, Dãy số, Cấp số cộng/nhân, Giới hạn, Quan hệ song song trong không gian, Thống kê ghép nhóm, Hàm số Mũ/Logarit, Đạo hàm, Quan hệ vuông góc trong không gian, Xác suất có điều kiện.
+- LỚP 12: Ứng dụng đạo hàm khảo sát hàm số, Vectơ và tọa độ Oxyz trong không gian, Nguyên hàm, Tích phân, Ứng dụng tích phân tính diện tích/thể tích, Xác suất Bayes.
+
+YÊU CẦU VỀ DẠNG BÀI:
+1. TRẮC NGHIỆM 4 LỰA CHỌN: Chuẩn cấu trúc A, B, C, D. Các nhiễu phải hợp lý.
+2. TRẮC NGHIỆM ĐÚNG/SAi: Đưa ra một nhận định và yêu cầu học sinh chọn "Đúng" hoặc "Sai".
+3. TRẮC NGHIỆM TRẢ LỜI NGẮN: Kết quả là một số cụ thể hoặc biểu thức đơn giản.
+`;
+
 export const chatWithAI = async (
   user: UserProfile,
   message: string,
@@ -230,7 +242,9 @@ export const generateLearningPath = async (
       {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "You are a Curriculum Expert. Output strictly valid JSON.",
+        systemInstruction: `Bạn là Chuyên gia Xây dựng Lộ trình Toán THPT theo Chương trình GDPT 2018 (SGK Kết nối tri thức).
+        ${VIETNAMESE_CURRICULUM_GUIDELINES}
+        Output strictly valid JSON.`,
         temperature: 0.7
       },
       "Generating Path"
@@ -290,11 +304,13 @@ export const generateUnitQuestions = async (
     Mô tả bài học: ${unit.description}.
     Độ khó: ${levelDesc}.
 
-    YÊU CẦU:
+    YÊU CẦU CHẤT LƯỢNG (QUAN TRỌNG):
+    - TUÂN THỦ: Chương trình GDPT 2018 và SGK Kết nối tri thức.
     - SỐ LƯỢNG: Phải tạo đủ 20 câu hỏi.
     - NỘI DUNG: Phải là kiến thức Toán THPT Lớp ${user.grade}. TUYỆT ĐỐI KHÔNG dùng kiến thức cấp 1, cấp 2.
-    - Đa dạng loại câu hỏi (trắc nghiệm, đúng/sai, điền khuyết).
-    - Phải có giải thích chi tiết cho từng câu.
+    - DẠNG BÀI: Đa dạng loại câu hỏi (trắc nghiệm, đúng/sai, điền biểu thức/số).
+    - GIẢI THÍCH: Phải có giải thích chi tiết, sư phạm, bước học sinh dễ hiểu.
+    ${VIETNAMESE_CURRICULUM_GUIDELINES}
     ${MATH_FORMATTING_RULES}
 
     === OUTPUT JSON ONLY ===
@@ -330,7 +346,10 @@ export const generateUnitQuestions = async (
       {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "You are a professional Math Question Generator. Ensure 100% accuracy.",
+        systemInstruction: `Bạn là Giáo viên Toán THPT thực thụ, am hiểu sâu sắc Chương trình GDPT 2018. 
+        Mọi đề bài phải chính xác về thuật ngữ toán học, đúng dạng bài thi của Bộ GD&ĐT Việt Nam.
+        ${VIETNAMESE_CURRICULUM_GUIDELINES}
+        Ensure 100% accuracy.`,
         temperature: 0.6
       },
       "Generating Questions"
@@ -375,8 +394,10 @@ export const generateChallengeUnit = async (
       Tạo PHIÊN BẢN NÂNG CAO (Level ${nextLevel}) cho bài học "${currentUnit.title}".
       - Lớp: ${user.grade}
       - Số lượng: ĐÚNG 20 câu (20% Trung bình, 80% Khó).
+      - Yêu cầu: Bám sát Chương trình GDPT 2018, độ khó nâng cao, tính phân hóa cao.
       - Output JSON ONLY (Single Unit structure).
       
+      ${VIETNAMESE_CURRICULUM_GUIDELINES}
       ${MATH_FORMATTING_RULES}
     `;
 
@@ -414,7 +435,9 @@ export const generateChallengeUnit = async (
       {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "You are a strict Math Coach. JSON output only.",
+        systemInstruction: `Bạn là Chuyên gia luyện thi Toán THPT. Đề bài nâng cao, logic, đúng cấu trúc.
+        ${VIETNAMESE_CURRICULUM_GUIDELINES}
+        JSON output only.`,
         temperature: 0.8
       },
       "Generating Challenge"
@@ -440,9 +463,11 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
   const prompt = `
     Tạo BÀI KIỂM TRA TỔNG HỢP (Final Exam) cho học sinh Lớp ${user.grade}.
     - 20 câu hỏi (5 Dễ, 10 TB, 5 Khó).
-    - Đủ 3 loại câu hỏi: trắc nghiệm, đúng/sai, điền từ.
+    - Đủ 3 loại câu hỏi: trắc nghiệm 4 lựa chọn, đúng/sai, điền biểu thức/số.
+    - Nội dung: Bao quát toàn bộ chương trình lớp ${user.grade} theo GDPT 2018.
     - Output JSON ONLY (Single Unit structure).
 
+    ${VIETNAMESE_CURRICULUM_GUIDELINES}
     ${MATH_FORMATTING_RULES}
   `;
   // Reuse Schema from Challenge
@@ -480,7 +505,9 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
       {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "You are an Exam Creator AI. JSON output only.",
+        systemInstruction: `Bạn là Hội đồng khảo thí Toán THPT. Đề thi phải có tính phân hóa, chính xác tuyệt đối.
+        ${VIETNAMESE_CURRICULUM_GUIDELINES}
+        JSON output only.`,
         temperature: 0.7
       },
       "Generating Exam"
