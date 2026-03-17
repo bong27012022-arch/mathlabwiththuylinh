@@ -75,11 +75,10 @@ export default function App() {
       setApiKey(storedKey);
       setGlobalApiKey(storedKey);
       setGlobalModel(storedModel);
+      loadGlobalConfigData();
     } else {
-      // Try to fetch from cloud before showing modal
-      loadGlobalConfigData().then(success => {
-        if (!success) setShowKeyModal(true);
-      });
+      setShowKeyModal(true);
+      loadGlobalConfigData();
     }
   }, []);
 
@@ -93,7 +92,7 @@ export default function App() {
 
     // If admin, also save to cloud as master key
     if (user.isAdmin) {
-      const confirmSave = window.confirm("Bạn là Admin, bạn có muốn lưu API Key VÀ Cấu hình Sync hiện tại lên Cloud làm 'Master Config' cho tất cả học sinh không?");
+      const confirmSave = window.confirm("Bạn là Admin, bạn có muốn lưu Cấu hình Sync hiện tại lên Cloud không? (Lưu ý: API Key sẽ không còn được tự động chia sẻ cho học sinh để tránh lỗi giới hạn Quota).");
       if (confirmSave) {
         const syncConfig = getSyncConfig();
         await saveGlobalConfig({ 
@@ -135,11 +134,7 @@ export default function App() {
       const config = await fetchGlobalConfig();
       if (config) {
         // AI Config
-        if (config.apiKey) {
-          localStorage.setItem(API_KEY_STORAGE, config.apiKey);
-          setApiKey(config.apiKey);
-          setGlobalApiKey(config.apiKey);
-        }
+        // Bỏ việc tự động load apiKey chung để mỗi học sinh dùng 1 key riêng (tránh 429 Limit)
         if (config.model) {
           localStorage.setItem(MODEL_STORAGE, config.model);
           setGlobalModel(config.model);
@@ -197,9 +192,9 @@ export default function App() {
   }, []);
 
   const handleLogin = async (name: string, dob: string) => {
-    // Attempt to load global key on login if missing
+    // Attempt to load global config on login if missing
     if (!apiKey) {
-      await loadGlobalConfigData();
+      setShowKeyModal(true);
     }
 
     const inputName = name.trim().toLowerCase();
