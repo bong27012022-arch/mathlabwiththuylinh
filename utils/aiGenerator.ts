@@ -7,7 +7,6 @@ let GLOBAL_API_KEY = "";
 let PREFERRED_MODEL = "gemini-1.5-flash";
 
 const MODEL_FALLBACK_LIST = [
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",
@@ -44,7 +43,6 @@ const generateWithFallback = async (
 ): Promise<any> => {
   // Ultra-resilient model sequence: Try newest stable models first, then fall back to older ones
   const modelsToTry = [
-    "gemini-2.5-flash",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
@@ -274,7 +272,8 @@ export const generateLearningPath = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const parsedData = JSON.parse(jsonText);
+    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanedJsonText);
 
     return parsedData.units.map((unit: any, index: number) => ({
       ...unit,
@@ -385,7 +384,8 @@ export const generateUnitQuestions = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No questions data");
-    const parsed = JSON.parse(jsonText);
+    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanedJsonText);
     return parsed.questions;
   } catch (error) {
     console.error("Question Generation Error:", error);
@@ -438,7 +438,8 @@ export const generateChallengeUnit = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const parsedUnit = JSON.parse(jsonText);
+    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsedUnit = JSON.parse(cleanedJsonText);
 
     return {
       ...parsedUnit,
@@ -489,7 +490,8 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
     );
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const parsedUnit = JSON.parse(jsonText);
+    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsedUnit = JSON.parse(cleanedJsonText);
 
     return {
       ...parsedUnit,
@@ -522,7 +524,8 @@ export const generateEntertainmentContent = async (user: UserProfile): Promise<G
     );
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const parsed = JSON.parse(jsonText);
+    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanedJsonText);
     return parsed.activities;
   } catch (error) {
     console.error("Game Gen Error", error);
