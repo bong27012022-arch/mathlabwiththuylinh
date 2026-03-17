@@ -272,7 +272,8 @@ export const generateLearningPath = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const cleanedJsonText = jsonMatch ? jsonMatch[0] : jsonText;
     const parsedData = JSON.parse(cleanedJsonText);
 
     return parsedData.units.map((unit: any, index: number) => ({
@@ -290,8 +291,8 @@ export const generateLearningPath = async (
       {
         id: `unit-fallback-${Date.now()}-1`,
         topicId: "fallback",
-        title: "Ôn tập cơ bản (AI Đang Bận)",
-        description: "Lộ trình tự động do hệ thống AI đang có quá nhiều bạn truy cập cùng lúc.",
+        title: "Lỗi tạo lộ trình (AI)",
+        description: `Lỗi AI: ${error instanceof Error ? error.message : String(error)}`,
         totalXp: 100,
         durationMinutes: 15,
         status: 'active',
@@ -384,7 +385,8 @@ export const generateUnitQuestions = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No questions data");
-    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const cleanedJsonText = jsonMatch ? jsonMatch[0] : jsonText;
     const parsed = JSON.parse(cleanedJsonText);
     return parsed.questions;
   } catch (error) {
@@ -397,7 +399,7 @@ export const generateUnitQuestions = async (
       fallbackQuestions.push({
         id: `q_fb_${i}`,
         type: "multiple-choice",
-        content: `Câu hỏi ôn tập ${i}: Nội dung về ${unit.title} (Lớp ${user.grade}).`,
+        content: `Lỗi AI: ${errorMessage.substring(0, 150)}...`,
         options: ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
         correctAnswer: "Đáp án A",
         explanation: `Đây là câu hỏi dự phòng do hệ thống AI đang bận. Lỗi: ${errorMessage}`,
@@ -438,7 +440,8 @@ export const generateChallengeUnit = async (
 
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const cleanedJsonText = jsonMatch ? jsonMatch[0] : jsonText;
     const parsedUnit = JSON.parse(cleanedJsonText);
 
     return {
@@ -490,7 +493,8 @@ export const generateComprehensiveTest = async (user: UserProfile): Promise<Lear
     );
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const cleanedJsonText = jsonMatch ? jsonMatch[0] : jsonText;
     const parsedUnit = JSON.parse(cleanedJsonText);
 
     return {
@@ -524,7 +528,8 @@ export const generateEntertainmentContent = async (user: UserProfile): Promise<G
     );
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
-    const cleanedJsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    const cleanedJsonText = jsonMatch ? jsonMatch[0] : jsonText;
     const parsed = JSON.parse(cleanedJsonText);
     return parsed.activities;
   } catch (error) {
