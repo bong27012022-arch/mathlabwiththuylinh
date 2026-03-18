@@ -11,7 +11,7 @@ interface Props {
 
 export const ApiKeyModal: React.FC<Props> = ({ isOpen, onSave, onClose, initialKey = '' }) => {
   const [key, setKey] = useState(initialKey);
-  const [model, setModel] = useState('gemini-3-flash-preview');
+  const [model, setModel] = useState('gemini-1.5-flash');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,9 +34,9 @@ export const ApiKeyModal: React.FC<Props> = ({ isOpen, onSave, onClose, initialK
   };
 
   const models = [
-    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', desc: 'Tốc độ cao, cân bằng (Khuyên dùng)' },
-    { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', desc: 'Thông minh hơn, xử lý phức tạp tốt' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Phiên bản ổn định, tiết kiệm' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Tốc độ cao, Rate Limit thoải mái (Khuyên dùng)' },
+    { id: 'gemini-1.5-flash-8b', name: 'Gemini Flash 8B', desc: 'Siêu nhanh, ít lỗi mạng' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Mới nhất, thông minh (Dễ dính 429)' },
   ];
 
   return (

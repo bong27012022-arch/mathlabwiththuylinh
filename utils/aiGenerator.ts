@@ -27,9 +27,9 @@ export const setGlobalModel = (model: string) => {
     actualModel = actualModel.replace("models/", "");
   }
 
-  // Handle fictional future models or known problematic models from UI/Cloud
-  if (actualModel.includes("gemini-3") || actualModel.includes("preview")) {
-    actualModel = "gemini-2.0-flash"; 
+  // Migrate old fictional labels from localStorage to the most stable model
+  if (actualModel.includes("gemini-3") || actualModel.includes("preview") || actualModel.includes("gemini-2.5")) {
+    actualModel = "gemini-1.5-flash"; 
   }
   
   PREFERRED_MODEL = actualModel;
