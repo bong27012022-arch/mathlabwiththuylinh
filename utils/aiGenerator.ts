@@ -93,26 +93,32 @@ const generateWithFallback = async (
       return { text: result.response.text() };
     } catch (error: any) {
       console.warn(`${taskName} failed with ${model}. Error:`, error);
-      errors.push(`[${model}] ${error.message}`);
+      
+      const errMsg = error?.message ? String(error.message).toLowerCase() : String(error).toLowerCase();
       
       // If we hit a rate limit/quota issue (429), log clearly but CONTINUE trying other models
-      // because different model tiers (e.g. 1.0 vs 2.5) have separate rate limit buckets
-      if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("quota")) {
-        errors.push(`[${model}] Hết lượt sử dụng miễn phí (Quota Exceeded). Vui lòng thử lại sau vài phút hoặc dùng API Key khác.`);
-        // We removed the 'break' here to ensure the system exhaustively tries all fallback models
+      if (error?.status === 429 || errMsg.includes("429") || errMsg.includes("quota")) {
+        errors.push(`[${model}] Hết Quota (429)`);
+      } else if (error?.status === 404 || errMsg.includes("404") || errMsg.includes("not found")) {
+        errors.push(`[${model}] Không tìm thấy model (404)`);
+      } else if (errMsg.includes("failed to fetch") || errMsg.includes("error fetching from")) {
+        errors.push(`[${model}] Lỗi mạng: Bị chặn kết nối hoặc rớt mạng`);
       } else {
-        errors.push(`[${model}] ${error.message}`);
+        // Keep error message short to avoid UI clutter
+        const rawMsg = error?.message || String(error);
+        const shortMsg = rawMsg.length > 60 ? rawMsg.substring(0, 60) + "..." : rawMsg;
+        errors.push(`[${model}] ${shortMsg}`);
       }
     }
   }
 
   // If all failed, provide a very clear human-readable summary if it's purely a quota issue
-  const allQuotaErrors = errors.every(e => e.includes("Hết lượt sử dụng") || e.includes("429"));
-  if (allQuotaErrors) {
-      throw new Error(`API Key của bạn đã hết lượt sử dụng miễn phí (Quota Exceeded) cho tất cả các mô hình. Vui lòng tạo API Key mới từ Google AI Studio hoặc nâng cấp tài khoản, sau đó vào phần Cài đặt của ứng dụng để cập nhật.`);
+  const hasQuotaError = errors.some(e => e.includes("Hết Quota (429)"));
+  if (hasQuotaError) {
+      throw new Error(`API Key của bạn đã hết lượt sử dụng miễn phí (Quota Exceeded). Vui lòng tạo API Key mới từ Google AI Studio, sau đó vào Cài đặt để cập nhật.`);
   }
 
-  throw new Error(`AI không phản hồi. Chi tiết: ${errors.join(' | ')}`);
+  throw new Error(`AI không phản hồi. Chi tiết các lỗi: ${errors.join(', ')}`);
 };
 
 const MATH_FORMATTING_RULES = `
@@ -395,14 +401,16 @@ export const generateUnitQuestions = async (
     // FALLBACK: Return error-diagnostic questions if AI fails
     // FALLBACK: Return error-diagnostic questions if AI fails
     const fallbackQuestions: Question[] = [];
+    const cleanMsg = errorMessage.length > 250 ? errorMessage.substring(0, 250) + "..." : errorMessage;
+    
     for (let i = 1; i <= 10; i++) {
       fallbackQuestions.push({
         id: `q_fb_${i}`,
         type: "multiple-choice",
-        content: `Lỗi AI: ${errorMessage.substring(0, 150)}...`,
-        options: ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
-        correctAnswer: "Đáp án A",
-        explanation: `Đây là câu hỏi dự phòng do hệ thống AI đang bận. Lỗi: ${errorMessage}`,
+        content: `**Lỗi AI:** Hệ thống không thể tạo câu hỏi. \n\n*Chi tiết:* ${cleanMsg}`,
+        options: ["Thử lại sau", "Kiểm tra mạng", "Đổi API Key", "Liên hệ Admin"],
+        correctAnswer: "Thử lại sau",
+        explanation: `Câu hỏi dự phòng vì AI đang bận hoặc lỗi mạng. Vui lòng tắt phần mềm chặn quảng cáo, kiểm tra Wi-Fi, hoặc làm mới API Key.`,
         difficulty: "easy"
       });
     }
