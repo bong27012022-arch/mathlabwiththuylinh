@@ -97,8 +97,10 @@ const generateWithFallback = async (
       const errMsg = error?.message ? String(error.message).toLowerCase() : String(error).toLowerCase();
       
       // If we hit a rate limit/quota issue (429), log clearly but CONTINUE trying other models
-      if (error?.status === 429 || errMsg.includes("429") || errMsg.includes("quota")) {
-        errors.push(`[${model}] Hết Quota (429)`);
+      if (error?.status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("resource has been exhausted")) {
+        errors.push(`[${model}] Hết Quota/Rate Limit (429)`);
+        // Tạm nghỉ 1.5 giây trước khi thử model tiếp theo để tránh dính tiếp Rate Limit
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } else if (error?.status === 404 || errMsg.includes("404") || errMsg.includes("not found")) {
         errors.push(`[${model}] Không tìm thấy model (404)`);
       } else if (errMsg.includes("failed to fetch") || errMsg.includes("error fetching from")) {
@@ -113,9 +115,9 @@ const generateWithFallback = async (
   }
 
   // If all failed, provide a very clear human-readable summary if it's purely a quota issue
-  const hasQuotaError = errors.some(e => e.includes("Hết Quota (429)"));
+  const hasQuotaError = errors.some(e => e.includes("Hết Quota"));
   if (hasQuotaError) {
-      throw new Error(`API Key của bạn đã hết lượt sử dụng miễn phí (Quota Exceeded). Vui lòng tạo API Key mới từ Google AI Studio, sau đó vào Cài đặt để cập nhật.`);
+      throw new Error(`API Key của bạn đã bị giới hạn số lần gọi (Rate Limit) hoặc hết lượt (Quota). Vui lòng đợi 1 phút và tải lại trang. Nếu vẫn lỗi, hãy vào Cài đặt để tạo API Key mới từ Google AI Studio.`);
   }
 
   throw new Error(`AI không phản hồi. Chi tiết các lỗi: ${errors.join(', ')}`);
@@ -325,7 +327,8 @@ export const generateUnitQuestions = async (
   user: UserProfile,
   unit: LearningUnit
 ): Promise<Question[]> => {
-  const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][(unit.level || 2) - 1];
+  const levelIndex = Math.min(Math.max((unit.level || 2) - 1, 0), 3);
+  const levelDesc = ["Yếu", "Trung bình", "Khá", "Xuất sắc"][levelIndex];
   
   const prompt = `
     Tạo ĐÚNG 10 câu hỏi toán học Lớp ${user.grade} (kiến thức THPT) cho bài học: "${unit.title}".

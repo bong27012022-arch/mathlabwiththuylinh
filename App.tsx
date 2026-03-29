@@ -192,6 +192,18 @@ export default function App() {
   }, []);
 
   const handleLogin = async (name: string, dob: string) => {
+    // --- BẢO TRÌ TẠM THỜI (TẮT TẠM THỜI HỌC SINH ĐĂNG NHẬP) ---
+    const isMaintenance = false; // Đổi thành false để mở lại cho học sinh
+    const inputNameRaw = name.trim().toLowerCase();
+    const isAdmin = inputNameRaw.includes('admin') || 
+                    STUDENT_ACCOUNTS.find(s => removeAccents(s.name) === removeAccents(inputNameRaw) && s.dob === dob.trim())?.isAdmin;
+    
+    if (isMaintenance && !isAdmin) {
+      setLoginError('Hệ thống đang tạm dừng nâng cấp máy chủ AI. Vui lòng quay lại sau nhé!');
+      return;
+    }
+    // ---------------------------------------------------------
+
     // Attempt to load global config on login if missing
     if (!apiKey) {
       setShowKeyModal(true);
@@ -536,7 +548,10 @@ export default function App() {
         return <LearningPathScreen
           user={user}
           onStartQuiz={async (unit) => {
-            if (!unit.questions || unit.questions.length === 0) {
+            // Check if existing questions are just fallback/error questions
+            const hasFallbackQuestions = unit.questions && unit.questions.some(q => q.id.toString().includes('_fb_'));
+
+            if (!unit.questions || unit.questions.length === 0 || hasFallbackQuestions) {
               setIsGenerating(true);
               try {
                 const questions = await generateUnitQuestions(user, unit);
